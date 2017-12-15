@@ -783,10 +783,10 @@ ngx_process_tag(ngx_http_html_head_filter_ctx_t *ctx,
     last = tagstr + len -2; 
 
     //Remove leading spaces
-    while(isspace(*start) && (start > last)) start++;
+    while(isspace(*start) && (start < last)) start++;
 
     //Remove trailing spaces
-    while(isspace(*last) && (start > last)) last--; 
+    while(isspace(*last) && (start < last)) last--; 
     *(last + 1) = '\0';
 
     for(i=0;start[i];i++)
@@ -875,39 +875,32 @@ ngx_test_content_compression(ngx_http_request_t *r)
                r->headers_out.content_encoding->value.data, tmp.len); 
 
 
-    if(tmp.len >= (sizeof("gzip") -1))
+    
+    if( tmp.len >= (sizeof("gzip") -1) && 
+        ngx_strncmp(tmp.data, (u_char*)"gzip" , tmp.len) == 0 )
     {
-        if( ngx_strncmp(tmp.data, (u_char*)"gzip" , tmp.len) == 0 )
-        {
-            return 1; 
-        }
+        return 1; 
     }
     
-    if(tmp.len >= (sizeof("deflate") -1))
+    if( tmp.len >= (sizeof("deflate") -1) &&
+        ngx_strncmp(tmp.data, (u_char*)"deflate" , tmp.len) == 0 )
     {
-        if( ngx_strncmp(tmp.data, (u_char*)"deflate" , tmp.len) == 0 )
-        {
-           return 1; 
-        }
+        return 1; 
     }
     
-    if(tmp.len >= (sizeof("compress") -1))
+    if( tmp.len >= (sizeof("compress") -1) &&
+        ngx_strncmp(tmp.data, (u_char*)"compress" , tmp.len) == 0 )
     {
-        if( ngx_strncmp(tmp.data, (u_char*)"compress" , tmp.len) == 0 )
-        {
-           return 1; 
-        }
+        return 1; 
     }
-
     
-    if(tmp.len >= (sizeof("br") -1))
+   
+    if( tmp.len >= (sizeof("br") -1) &&
+        ngx_strncmp(tmp.data, (u_char*)"br" , tmp.len) == 0 )
     {
-        if( ngx_strncmp(tmp.data, (u_char*)"br" , tmp.len) == 0 )
-        {
-           return 1; 
-        }
-    }    
-
+        return 1; 
+    }
+        
     //Fail safe to false if compression cannot be determined
     return 0; 
 }
