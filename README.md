@@ -3,10 +3,9 @@ A Simple Nginx Response Body Filter Module
 
 ## Introduction
 The repository contains an Nginx Resonse Body Filter Module that will filter a HTTP response and insert a specific text string
-after the html &lt;head&gt; tag. 
+after the html &lt;head&gt; tag. For example, it can insert a monitoring javascript after the &lt;head&gt; tag.
 
-It can be used together with Nginx proxy_pass, to insert a text string into HTTP responses from an upstream web server. The module
-will process HTTP 200 OK responses where the content type is text/html.   
+The filter module can be used together with Nginx proxy_pass, to insert text string into HTTP responses from an upstream web server. The module will process HTTP 200 OK responses where the content type is text/html. If the content from the upstream server is compressed (gzip, deflate etc...), it will not be modified. Refer to the Further Details below for more information on how the module is implemented and how it can be used.
 
 ## Module Usage
 The module takes 2 directives that can be configured in the Nginx 's location context. 
@@ -18,8 +17,7 @@ This directive enables the html head filter module. The argument "text string" w
 
 **html_head_filter_block** on/off
 
-This is an optional directive. If it is set to on, the module will display a blank html page if the &lt;head&gt; tag is not found within the 
-first 512 characters of a HTTP response. By default , if omitted, this directive is off. 
+This is an optional directive. If it is set to on, the module will display a blank html page if the &lt;head&gt; tag is not found within the first 512 characters of a HTTP response. By default , if omitted, this directive is off. 
 
 
 ## Compiling and Installation
@@ -54,7 +52,7 @@ For security, do verify the signatures of the downloads.
 ## Further Details
 
 Refer to 
-[https://www.nighthour.sg/articles/2017/writing-an-nginx-response-body-filter-module.html](https://www.nighthour.sg/articles/2017/writing-an-nginx-response-body-filter-module.html) for an article on how this module is implemented. 
+[https://www.nighthour.sg/articles/2017/writing-an-nginx-response-body-filter-module.html](https://www.nighthour.sg/articles/2017/writing-an-nginx-response-body-filter-module.html) for an in-depth article on how this module is implemented and how it can be used. 
 
 
 ## Source signature
@@ -63,4 +61,5 @@ Gpg Signed commits are used for committing the source files.
 > Look at the repository commits tab for the verified label for each commit, or refer to [https://www.nighthour.sg/git-gpg.html](https://www.nighthour.sg/git-gpg.html) for instructions on verifying the git commit. 
 
 > A userful link on how to verify gpg signature [https://github.com/blog/2144-gpg-signature-verification](https://github.com/blog/2144-gpg-signature-verification)
+
 
