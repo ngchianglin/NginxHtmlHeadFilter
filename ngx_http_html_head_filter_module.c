@@ -371,7 +371,18 @@ ngx_http_html_head_body_filter(ngx_http_request_t *r, ngx_chain_t *in)
             {
                 ctx->last = 1;
             }	
-        }			
+        }	
+
+        b = ctx->in->buf;
+
+        if(b->last_buf || b->last_in_chain)
+        {//Last buffer and <head> not found
+         //even if content is less than 512 chars
+           if(!ctx->found)
+           {
+              ctx->last = 1;
+           }
+        }		
     
         *ctx->last_out=ctx->in;
         ctx->last_out=&ctx->in->next;
@@ -417,6 +428,7 @@ ngx_http_html_head_body_filter(ngx_http_request_t *r, ngx_chain_t *in)
         ctx->out->next = NULL; 
 		
     }
+    
 
    
     rc=ngx_http_next_body_filter(r, ctx->out);
