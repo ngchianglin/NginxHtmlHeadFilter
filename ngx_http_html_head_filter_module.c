@@ -53,6 +53,12 @@ Dec 2017
 #define HF_MAX_STACK_SZ 512
 #define HF_MAX_CONTENT_SZ 512
 
+#if (NGX_DEBUG)
+#define HT_HEADF_DEBUG 1
+#else
+#define HT_HEADF_DEBUG 0
+#endif
+
 /*
 stack for parsing html
 */
@@ -197,6 +203,9 @@ ngx_http_html_head_create_conf(ngx_conf_t *cf)
     conf = ngx_pcalloc(cf->pool, sizeof(ngx_http_html_head_filter_loc_conf_t));
     if(conf == NULL)
     {
+        ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
+            "[Html_head filter]: ngx_http_html_head_create_conf "
+            " cannot allocate memory for config");
         return NGX_CONF_ERROR;
     }
 
@@ -232,34 +241,69 @@ ngx_http_html_head_header_filter(ngx_http_request_t *r )
     ngx_uint_t content_length=0; 
 
     slcf = ngx_http_get_module_loc_conf(r, ngx_http_html_head_filter_module);
+    
+    
+    if(slcf == NULL)
+    {
+        #if HT_HEADF_DEBUG
+            ngx_log_debug0(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
+                "[Html_head filter]: ngx_http_html_head_header_filter "
+                "null configuration");
+        #endif
+       
+        return ngx_http_next_header_filter(r);
+    }
+    
 
     if(slcf->insert_text.len == 0)
     {
-        ngx_log_error(NGX_LOG_WARN, r->connection->log, 0, 
-                      "Html head filter: Empty configuration insert text");
+        #if HT_HEADF_DEBUG
+            ngx_log_debug0(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
+                "[Html_head filter]: empty configuration insert text");
+        #endif
+        
         return ngx_http_next_header_filter(r);
     }
+    
 
     if(r->headers_out.content_type.len == 0 || 
-     r->headers_out.content_length_n == 0 ||
-     ngx_test_content_type(r) == 0) 
+        r->headers_out.content_length_n == 0 ||
+        r->header_only )
     {
-        ngx_log_error(NGX_LOG_WARN, r->connection->log, 0, 
-                      "Html head filter: Content type not html");
+        #if HT_HEADF_DEBUG
+            ngx_log_debug0(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
+                "[Html_head filter]: empty content type or "
+                "header only ");
+        #endif
+        
+        return ngx_http_next_header_filter(r);
+    }
+    
+     
+    if(ngx_test_content_type(r) == 0) 
+    {
+        #if HT_HEADF_DEBUG
+            ngx_log_debug0(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
+                "[Html_head filter]: content type not html");
+        #endif            
+        
         return ngx_http_next_header_filter(r);
     }
 
+    
     if(ngx_test_content_compression(r) != 0)
     {//Compression enabled, don't filter   
         ngx_log_error(NGX_LOG_WARN, r->connection->log, 0, 
-                     "Html head filter: Compression enabled");
+                     "[Html_head filter]: compression enabled");
+                     
         return ngx_http_next_header_filter(r);
     }
  
     if(r->headers_out.status != NGX_HTTP_OK)
     {//Response is not HTTP 200   
         ngx_log_error(NGX_LOG_WARN, r->connection->log, 0, 
-                     "Html head filter: HTTP Response is not 200");
+                     "[Html_head filter]: http response is not 200");
+                     
         return ngx_http_next_header_filter(r);
     }
 
@@ -271,6 +315,7 @@ ngx_http_html_head_header_filter(ngx_http_request_t *r )
                          slcf->insert_text.len;
         r->headers_out.content_length_n = content_length;      
     }
+    
 
     ctx = ngx_http_get_module_ctx(r, ngx_http_html_head_filter_module);
     if(ctx == NULL)
@@ -281,13 +326,15 @@ ngx_http_html_head_header_filter(ngx_http_request_t *r )
         if(ctx == NULL)
         {
             ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
-                          "Html head filter: Cannot allocate ctx"
+                          "[Html_head filter]: cannot allocate ctx"
                           " memory");
+                          
             return ngx_http_next_header_filter(r);
         }
         
         ngx_http_set_ctx(r, ctx, ngx_http_html_head_filter_module);
     }
+    
     
     return ngx_http_next_header_filter(r);
     
@@ -312,14 +359,20 @@ ngx_http_html_head_body_filter(ngx_http_request_t *r, ngx_chain_t *in)
                                   "<meta charset=\"UTF-8\">"
 	                              "<title></title></head><body>"
                                   "</body></html>";
+                                  
 
     slcf = ngx_http_get_module_loc_conf(r, ngx_http_html_head_filter_module);
     ctx = ngx_http_get_module_ctx(r, ngx_http_html_head_filter_module);
 
+    
     if(slcf == NULL)
     {
-        ngx_log_error(NGX_LOG_WARN, r->connection->log, 0, 
-                     "Html head filter: Unable to get loc configuration");
+        #if HT_HEADF_DEBUG
+            ngx_log_debug0(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
+                "[Html_head filter]: ngx_http_html_head_body_filter "
+                "null configuration");
+        #endif
+       
         return ngx_http_next_body_filter(r, in);
     }
 
@@ -327,7 +380,9 @@ ngx_http_html_head_body_filter(ngx_http_request_t *r, ngx_chain_t *in)
     if(ctx == NULL)
     {
        ngx_log_error(NGX_LOG_WARN, r->connection->log, 0, 
-                     "Html head filter: Unable to get module ctx");
+            "[Html_head filter]: ngx_http_html_head_body_filter" 
+            "unable to get module ctx");
+            
        return ngx_http_next_body_filter(r, in);
     }
 
@@ -335,7 +390,8 @@ ngx_http_html_head_body_filter(ngx_http_request_t *r, ngx_chain_t *in)
     if(in == NULL)
     {
        ngx_log_error(NGX_LOG_WARN, r->connection->log, 0, 
-                     "Html head filter: Input chain is null");
+            "[Html_head filter]: input chain is null");
+                     
        return ngx_http_next_body_filter(r, in);
     }
 
@@ -343,8 +399,10 @@ ngx_http_html_head_body_filter(ngx_http_request_t *r, ngx_chain_t *in)
     //Copy the incoming chain to ctx-in
     if (ngx_chain_add_copy(r->pool, &ctx->in, in) != NGX_OK) 
     {
-        ngx_log_error(NGX_LOG_WARN, r->connection->log, 0, 
-                     "Html head filter: Unable to copy input chain - in");
+        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
+            "[Html_head filter]: unable to copy"
+            " input chain - in");
+                     
         return NGX_ERROR;
     }
 
@@ -395,15 +453,17 @@ ngx_http_html_head_body_filter(ngx_http_request_t *r, ngx_chain_t *in)
     if(ctx->last  && slcf->block == 1) 
     {
 
-        ngx_log_error(NGX_LOG_WARN, r->connection->log, 0,
-                      "Html head filter: Cannot find <head> "
+        ngx_log_error(NGX_LOG_ALERT, r->connection->log, 0,
+                      "[Html_head filter]: cannot find <head> "
                       "blocking");
 
         cl = ngx_chain_get_free_buf(r->pool, &ctx->free);
         if (cl == NULL) 
         {
             ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
-                     "Html head filter: Unable to allocate output chain");
+                "[Html_head filter]: ngx_http_html_head_body_filter "
+                "unable to allocate output chain");
+                
             return NGX_ERROR;
         }
 
@@ -426,10 +486,10 @@ ngx_http_html_head_body_filter(ngx_http_request_t *r, ngx_chain_t *in)
         
         ctx->out = cl; 
         ctx->out->next = NULL; 
+        r->keepalive = 0;
 		
     }
     
-
    
     rc=ngx_http_next_body_filter(r, ctx->out);
 
@@ -439,6 +499,7 @@ ngx_http_html_head_body_filter(ngx_http_request_t *r, ngx_chain_t *in)
     ctx->in = NULL; 
 
     return rc;
+    
 }
 
 
@@ -457,7 +518,9 @@ ngx_html_insert_output(ngx_http_html_head_filter_ctx_t *ctx,
     if(ctx->in == NULL)
     {
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
-                     "Html head filter: Text Insertion ctx->in is NULL");
+             "[Html_head filter]: ngx_html_insert_output "
+             "text Insertion ctx->in is NULL");
+             
         return NGX_ERROR;
     }
 
@@ -468,9 +531,9 @@ ngx_html_insert_output(ngx_http_html_head_filter_ctx_t *ctx,
     if(b->pos + ctx->index + 1 > b->last)
     {//Check that the head tag position does not exceed buffer
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
-                     "Html head filter: Invalid input buffer "
-                     "at text insertion");
-
+            "[Html_head filter]: ngx_html_insert_output "
+            "invalid input buffer at text insertion");
+            
         return NGX_ERROR;          
     }
 
@@ -478,7 +541,9 @@ ngx_html_insert_output(ngx_http_html_head_filter_ctx_t *ctx,
     if (cl == NULL) 
     {
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
-                     "Html head filter: Unable to allocate output chain");
+            "[Html_head filter]: ngx_html_insert_output "
+            "unable to allocate output chain");
+            
         return NGX_ERROR;
     }
 
@@ -500,7 +565,9 @@ ngx_html_insert_output(ngx_http_html_head_filter_ctx_t *ctx,
     if (cl == NULL) 
     {
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
-                     "Html head filter: Unable to allocate output chain");
+             "[Html_head filter]: ngx_html_insert_output "
+             "unable to allocate output chain");
+             
         return NGX_ERROR;
     }
 
@@ -541,7 +608,9 @@ ngx_html_insert_output(ngx_http_html_head_filter_ctx_t *ctx,
     if (cl == NULL) 
     {
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
-                     "Html head filter: Unable to allocate output chain");
+            "[Html_head filter]: ngx_html_insert_output unable to allocate "
+            "output chain");
+            
         return NGX_ERROR;
     }
 
@@ -589,8 +658,9 @@ ngx_parse_buf_html(ngx_http_html_head_filter_ctx_t *ctx,
     if(ctx->in == NULL)
     {
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
-                        "Html head filter: Unable to parse html "
-                        "ctx->in is NULL");  
+            "[Html_head filter]: ngx_parse_buf_html "
+            "unable to parse html ctx->in is NULL");  
+            
         return NGX_ERROR;
     }
 		
@@ -604,8 +674,10 @@ ngx_parse_buf_html(ngx_http_html_head_filter_ctx_t *ctx,
         {
             ngx_log_error(NGX_LOG_WARN, 
                r->connection->log, 0, 
-               "Html head filter: Unable to find <head> tag within 512 "
+               "[Html_head filter]: ngx_parse_buf_html unable "
+               "to find <head> tag within 512 "
                "characters");  
+               
             return NGX_ERROR;
         } 
         
@@ -621,8 +693,10 @@ ngx_parse_buf_html(ngx_http_html_head_filter_ctx_t *ctx,
 
                 if(push(c, &ctx->stack) == -1)
                 {
-                      ngx_log_error(NGX_LOG_WARN, r->connection->log, 0, 
-                         "Html head filter: Parse stack is full");  
+                      ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
+                        "[Html_head filter]: ngx_parse_buf_html "
+                        "parse stack is full");  
+                         
                       return NGX_ERROR;
                 }
                 
@@ -634,8 +708,10 @@ ngx_parse_buf_html(ngx_http_html_head_filter_ctx_t *ctx,
                 {
                     if(push(c, &ctx->stack) == -1)
                     {
-                        ngx_log_error(NGX_LOG_WARN, r->connection->log, 0, 
-                         "Html head filter: Parse stack is full");  
+                        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
+                            "[Html_head filter]: ngx_parse_buf_html "
+                            "parse stack is full");  
+                            
                         return NGX_ERROR;
                     }
 
@@ -666,8 +742,10 @@ ngx_parse_buf_html(ngx_http_html_head_filter_ctx_t *ctx,
                     ctx->tagquote=1;
                     if(push(c, &ctx->stack) == -1)
                     {
-                        ngx_log_error(NGX_LOG_WARN, r->connection->log, 0, 
-                         "Html head filter: Parse stack is full");  
+                        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
+                            "[Html_head filter]: ngx_parse_buf_html "
+                            "parse stack is full");  
+                            
                         return NGX_ERROR;
                     }
                 }
@@ -676,8 +754,10 @@ ngx_parse_buf_html(ngx_http_html_head_filter_ctx_t *ctx,
                     ctx->tagquote=0; 
                     if(push(c, &ctx->stack) == -1)
                     {
-                        ngx_log_error(NGX_LOG_WARN, r->connection->log, 0, 
-                         "Html head filter: Parse stack is full");  
+                         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
+                            "[Html_head filter]: ngx_parse_buf_html "
+                            "parse stack is full");
+                            
                         return NGX_ERROR;
                     }
             
@@ -686,8 +766,10 @@ ngx_parse_buf_html(ngx_http_html_head_filter_ctx_t *ctx,
                 {
                     if(push(c, &ctx->stack) == -1)
                     {
-                        ngx_log_error(NGX_LOG_WARN, r->connection->log, 0, 
-                         "Html head filter: Parse stack is full");  
+                        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
+                            "[Html_head filter]: ngx_parse_buf_html "
+                            "parse stack is full");
+                            
                         return NGX_ERROR;
                     }
                 }
@@ -701,8 +783,10 @@ ngx_parse_buf_html(ngx_http_html_head_filter_ctx_t *ctx,
                     ctx->tagsquote = 1;
                     if(push(c, &ctx->stack) == -1)
                     {
-                        ngx_log_error(NGX_LOG_WARN, r->connection->log, 0, 
-                         "Html head filter: Parse stack is full");  
+                        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
+                            "[Html_head filter]: ngx_parse_buf_html "
+                            "parse stack is full");
+                            
                         return NGX_ERROR;
                     }  
                 }   
@@ -711,8 +795,10 @@ ngx_parse_buf_html(ngx_http_html_head_filter_ctx_t *ctx,
                     ctx->tagsquote = 0;
                     if(push(c, &ctx->stack) == -1)
                     {
-                        ngx_log_error(NGX_LOG_WARN, r->connection->log, 0, 
-                         "Html head filter: Parse stack is full");  
+                         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
+                            "[Html_head filter]: ngx_parse_buf_html "
+                            "parse stack is full");
+                            
                         return NGX_ERROR;
                     }
                 } 
@@ -720,8 +806,10 @@ ngx_parse_buf_html(ngx_http_html_head_filter_ctx_t *ctx,
                 {
                     if(push(c, &ctx->stack) == -1)
                     {
-                        ngx_log_error(NGX_LOG_WARN, r->connection->log, 0, 
-                         "Html head filter: Parse stack is full");  
+                        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
+                            "[Html_head filter]: ngx_parse_buf_html "
+                            "parse stack is full");
+                            
                         return NGX_ERROR;
                     }
                 }
@@ -734,8 +822,10 @@ ngx_parse_buf_html(ngx_http_html_head_filter_ctx_t *ctx,
                 {
                     if(push(c, &ctx->stack) == -1)
                     {
-                        ngx_log_error(NGX_LOG_WARN, r->connection->log, 0, 
-                         "Html head filter: Parse stack is full");  
+                         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
+                            "[Html_head filter]: ngx_parse_buf_html "
+                            "parse stack is full");
+                            
                         return NGX_ERROR;
                     }
                 }
@@ -771,8 +861,10 @@ ngx_process_tag(ngx_http_html_head_filter_ctx_t *ctx,
     {
         if(push('\0', &ctx->stack) == -1)
         {
-            ngx_log_error(NGX_LOG_WARN, r->connection->log, 0, 
-                         "Html head filter: Parse stack is full");  
+            ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
+                "[Html_head filter]: ngx_process_tag "
+                "parse stack is full");  
+                         
             return NGX_ERROR;
         }
     
@@ -835,7 +927,8 @@ ngx_test_content_type(ngx_http_request_t *r)
     if(tmp.data == NULL)
     {
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
-        "Html head filter: Cannot allocate buffer for content type check");
+            "[Html_head filter]: ngx_test_content_type "
+            "cannot allocate buffer for content type check");
         return 0;
     }
 
@@ -879,7 +972,9 @@ ngx_test_content_compression(ngx_http_request_t *r)
     if(tmp.data == NULL)
     {
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
-        "Html head filter: Cannot allocate buffer for compression check");
+            "[Html_head filter]: ngx_test_content_compression"
+            " cannot allocate buffer for compression check");
+            
         return 0;
     }
 
