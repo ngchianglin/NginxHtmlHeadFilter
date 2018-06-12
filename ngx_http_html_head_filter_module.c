@@ -379,11 +379,13 @@ ngx_http_html_head_body_filter(ngx_http_request_t *r, ngx_chain_t *in)
 
     if(ctx == NULL)
     {
-       ngx_log_error(NGX_LOG_WARN, r->connection->log, 0, 
-            "[Html_head filter]: ngx_http_html_head_body_filter" 
-            "unable to get module ctx");
+        #if HT_HEADF_DEBUG
+            ngx_log_debug0(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
+                "[Html_head filter]: ngx_http_html_head_body_filter "
+                "unable to get module ctx");
+        #endif           
             
-       return ngx_http_next_body_filter(r, in);
+        return ngx_http_next_body_filter(r, in);
     }
 
 
@@ -1037,6 +1039,7 @@ push(u_char c, headfilter_stack_t *stack)
     stack->data[stack->top] = c;
     return 0;    
 }
+
 
 
 
