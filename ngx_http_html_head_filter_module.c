@@ -110,6 +110,8 @@ static ngx_http_output_body_filter_pt    ngx_http_next_body_filter;
 /* Function prototypes */
 static ngx_int_t ngx_http_html_head_init(ngx_conf_t * cf);
 static void * ngx_http_html_head_create_conf(ngx_conf_t *cf);
+static char * ngx_http_html_head_merge_loc_conf(ngx_conf_t *cf,
+	void *parent, void *child);
 static ngx_int_t ngx_http_html_head_header_filter(ngx_http_request_t *r );
 static ngx_int_t ngx_http_html_head_body_filter(ngx_http_request_t *r, 
                                                 ngx_chain_t *in);
@@ -169,7 +171,7 @@ static ngx_http_module_t  ngx_http_html_head_filter_ctx =
     NULL, //Create server config
     NULL, //Merge server config
     ngx_http_html_head_create_conf, //Create loc config
-    NULL //Merge loc config
+    ngx_http_html_head_merge_loc_conf //Merge loc config
 };
 
 
@@ -211,6 +213,22 @@ ngx_http_html_head_create_conf(ngx_conf_t *cf)
 
     conf->block = NGX_CONF_UNSET;
     return conf;
+
+}
+
+/* Merges the module location config struct */
+static char* 
+ngx_http_html_head_merge_loc_conf(ngx_conf_t *cf,                 
+    void *parent, void *child) 
+{
+
+    ngx_http_html_head_filter_loc_conf_t *prev = parent;
+    ngx_http_html_head_filter_loc_conf_t *conf = child;
+
+    ngx_conf_merge_value(conf->block, prev->block, 0);
+    ngx_conf_merge_str_value(conf->insert_text, prev->insert_text, '\0');
+
+   return NGX_CONF_OK;
 
 }
 
