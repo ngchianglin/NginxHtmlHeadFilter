@@ -480,6 +480,7 @@ ngx_http_html_head_body_filter(ngx_http_request_t *r, ngx_chain_t *in)
         if(r ==r->main)
         {		
             b->last_buf = 1;
+            b->last_in_chain = 1;
         }
         else
         {
