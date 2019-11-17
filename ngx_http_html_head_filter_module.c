@@ -52,6 +52,7 @@ Dec 2017
 
 #define HF_MAX_STACK_SZ 512
 #define HF_MAX_CONTENT_SZ 512
+#define HF_SMALL_CONTENT_SZ 2048
 
 #if (NGX_DEBUG)
 #define HT_HEADF_DEBUG 1
@@ -77,12 +78,14 @@ state per request
 typedef struct
 {
 ngx_uint_t  last;
+ngx_uint_t  last_search; 
 ngx_uint_t  count;
 ngx_uint_t  found;
 ngx_uint_t  index;
 ngx_uint_t  starttag; 
 ngx_uint_t  tagquote;
 ngx_uint_t  tagsquote;
+ngx_uint_t  small;
 headfilter_stack_t stack;
 ngx_chain_t  *free;
 ngx_chain_t  *busy;
@@ -328,9 +331,16 @@ ngx_http_html_head_header_filter(ngx_http_request_t *r )
     r->filter_need_in_memory = 1;
 
     if (r == r->main) 
-    {//Main request 
+    {//Main request
         content_length = r->headers_out.content_length_n + 
-                         slcf->insert_text.len;
+            slcf->insert_text.len;
+        #if HT_HEADF_DEBUG
+            ngx_log_debug2(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
+                "[Html_head filter]: content length prev : %ui, new : %ui", 
+				r->headers_out.content_length_n,
+				content_length
+				);
+        #endif           
         r->headers_out.content_length_n = content_length;      
     }
     
@@ -353,6 +363,13 @@ ngx_http_html_head_header_filter(ngx_http_request_t *r )
         ngx_http_set_ctx(r, ctx, ngx_http_html_head_filter_module);
     }
     
+    if(content_length < HF_SMALL_CONTENT_SZ)
+    {
+        ctx->small = 1; 
+        r->connection->buffered |= NGX_HTTP_SUB_BUFFERED;
+    }
+    
+    ctx->last_out = &ctx->out;
     
     return ngx_http_next_header_filter(r);
     
@@ -373,10 +390,7 @@ ngx_http_html_head_body_filter(ngx_http_request_t *r, ngx_chain_t *in)
     ngx_chain_t  *cl;
     ngx_buf_t  *b;
     ngx_int_t rc;
-    u_char* empty_page = (u_char*)"<!DOCTYPE html><html><head>"
-                                  "<meta charset=\"UTF-8\">"
-	                              "<title></title></head><body>"
-                                  "</body></html>";
+    u_char *empty_page = (u_char*)" \n";
                                   
 
     slcf = ngx_http_get_module_loc_conf(r, ngx_http_html_head_filter_module);
@@ -414,8 +428,8 @@ ngx_http_html_head_body_filter(ngx_http_request_t *r, ngx_chain_t *in)
                      
        return ngx_http_next_body_filter(r, in);
     }
-
-
+	
+   
     //Copy the incoming chain to ctx-in
     if (ngx_chain_add_copy(r->pool, &ctx->in, in) != NGX_OK) 
     {
@@ -426,13 +440,16 @@ ngx_http_html_head_body_filter(ngx_http_request_t *r, ngx_chain_t *in)
         return NGX_ERROR;
     }
 
-    ctx->last_out = &ctx->out;
+    if(!ctx->small)
+    {/* not small data just pass through as per normal */
+        ctx->last_out = &ctx->out;
+    }
    
     //Loop through all the incoming buffers
     while(ctx->in)
     {	
         ctx->index = 0; 
-        if(ctx->found == 0 && ctx->last == 0)
+        if(ctx->found == 0 && ctx->last_search == 0)
         {		 
             rc = ngx_parse_buf_html(ctx, r);
             if(rc == NGX_OK)
@@ -447,7 +464,7 @@ ngx_http_html_head_body_filter(ngx_http_request_t *r, ngx_chain_t *in)
             }
             else if(rc == NGX_ERROR)
             {
-                ctx->last = 1;
+                ctx->last_search = 1;
             }	
         }	
 
@@ -456,9 +473,10 @@ ngx_http_html_head_body_filter(ngx_http_request_t *r, ngx_chain_t *in)
         if(b->last_buf || b->last_in_chain)
         {//Last buffer and <head> not found
          //even if content is less than 512 chars
+           ctx->last = 1; 
            if(!ctx->found)
            {
-              ctx->last = 1;
+              ctx->last_search = 1;
            }
         }		
     
@@ -467,10 +485,9 @@ ngx_http_html_head_body_filter(ngx_http_request_t *r, ngx_chain_t *in)
         ctx->in = ctx->in->next;
     }
 
-    *ctx->last_out = NULL;
 	
     //If <head> is not found and block option is enabled
-    if(ctx->last  && slcf->block == 1) 
+    if(ctx->last_search  && slcf->block == 1) 
     {
 
         ngx_log_error(NGX_LOG_ALERT, r->connection->log, 0,
@@ -478,6 +495,7 @@ ngx_http_html_head_body_filter(ngx_http_request_t *r, ngx_chain_t *in)
                       "blocking");
 
         cl = ngx_chain_get_free_buf(r->pool, &ctx->free);
+        
         if (cl == NULL) 
         {
             ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
@@ -486,14 +504,16 @@ ngx_http_html_head_body_filter(ngx_http_request_t *r, ngx_chain_t *in)
                 
             return NGX_ERROR;
         }
-
-        b=cl->buf;
+                
+        b = cl->buf ;
         ngx_memzero(b, sizeof(ngx_buf_t));
 
         b->tag = (ngx_buf_tag_t) &ngx_http_html_head_filter_module;
         b->memory=1;
         b->pos = empty_page;
         b->last = empty_page + ngx_strlen(empty_page);
+        b->start = b->pos;
+        b->end = b->last; 
 
         if(r ==r->main)
         {		
@@ -508,15 +528,37 @@ ngx_http_html_head_body_filter(ngx_http_request_t *r, ngx_chain_t *in)
         ctx->out = cl; 
         ctx->out->next = NULL; 
         r->keepalive = 0;
-		
+        ctx->last = 1;
+        
     }
     
-   
+    if(ctx->small && ctx->last == 0)
+    {/* Small size data and is not last buffer */
+     /* continue to buffer up the output */
+        #if HT_HEADF_DEBUG
+        ngx_log_debug0(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
+		     "[Html_head filter]: Small data and not last buffer sending NGX_OK"); 
+        
+        #endif
+        return NGX_OK;
+    } 
+    
+    
+    if(ctx->last && ctx->found == 0)
+    {
+        r->keepalive = 0;
+    }
+    
+    /* regular data or last buffer */
     rc=ngx_http_next_body_filter(r, ctx->out);
-
     ngx_chain_update_chains(r->pool, &ctx->free, &ctx->busy, &ctx->out,
                             (ngx_buf_tag_t)&ngx_http_html_head_filter_module);
-
+                            
+    if (ctx->small && ctx->last)
+    {
+        r->connection->buffered &= ~NGX_HTTP_SUB_BUFFERED;
+    }                    
+    
     ctx->in = NULL; 
 
     return rc;
@@ -1058,6 +1100,7 @@ push(u_char c, headfilter_stack_t *stack)
     stack->data[stack->top] = c;
     return 0;    
 }
+
 
 
 
