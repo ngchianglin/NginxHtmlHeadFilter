@@ -32,7 +32,7 @@ tag. For example, it can insert a external javascript
 to a html page. 
 
 The <head> must appear within the first 
-512 characters of the document. 
+128 characters of the document. 
 An optional configuration directive
 allows a blank page to be shown if 
 the <head> tag is not found. If there is
@@ -51,7 +51,7 @@ Dec 2017
 #include <ngx_http.h>
 
 #define HF_MAX_STACK_SZ 512
-#define HF_MAX_CONTENT_SZ 512
+#define HF_MAX_CONTENT_SZ 128
 #define HF_SMALL_CONTENT_SZ 2048
 
 #if (NGX_DEBUG)
@@ -472,7 +472,7 @@ ngx_http_html_head_body_filter(ngx_http_request_t *r, ngx_chain_t *in)
 
         if(b->last_buf || b->last_in_chain)
         {//Last buffer and <head> not found
-         //even if content is less than 512 chars
+         //even if content is less than 128 chars
            ctx->last = 1; 
            if(!ctx->found)
            {
@@ -738,7 +738,7 @@ ngx_parse_buf_html(ngx_http_html_head_filter_ctx_t *ctx,
             ngx_log_error(NGX_LOG_WARN, 
                r->connection->log, 0, 
                "[Html_head filter]: ngx_parse_buf_html unable "
-               "to find <head> tag within 512 "
+               "to find <head> tag within 128 "
                "characters");  
                
             return NGX_ERROR;
