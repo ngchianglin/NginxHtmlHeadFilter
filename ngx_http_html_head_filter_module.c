@@ -916,37 +916,31 @@ static ngx_int_t
 ngx_process_tag(ngx_http_html_head_filter_ctx_t *ctx, 
                 ngx_http_request_t *r)
 {
-    u_char tmp[HF_MAX_STACK_SZ + 1], *start, *last, *tagstr;
+    u_char *start, *last, *tagstr;
     ngx_uint_t i;
-    ngx_uint_t len = ctx->stack.top + 1;
-
-    if(len < HF_MAX_STACK_SZ)
-    {
-        if(push('\0', &ctx->stack) == -1)
-        {
-            ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
-                "[Html_head filter]: ngx_process_tag "
-                "parse stack is full");  
-                         
-            return NGX_ERROR;
-        }
+    ngx_uint_t len;
     
-        tagstr = ctx->stack.data; 
-         
-    }
-    else
+    if(push('\0', &ctx->stack) == -1)
     {
-        for(i=0;i<len;i++)
-        {
-            tmp[i] = ctx->stack.data[i];   
-        }
-
-        tmp[i]='\0';
-        tagstr = tmp;
+        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
+            "[Html_head filter]: ngx_process_tag "
+            "parse stack is full");  
+                     
+        return NGX_ERROR;
     }
 
+    /* number of elements without the '\0' */
+    len = ctx->stack.top;
+    tagstr = ctx->stack.data; 
+    
+    /* len must be at least 6 to match <head> */
+    if(len < 6)
+    {
+        return NGX_AGAIN;
+    }        
+    
     //Remove < and >
-    start = tagstr +1; 
+    start = tagstr + 1; 
     last = tagstr + len -2; 
 
     //Remove leading spaces
