@@ -52,7 +52,7 @@ Dec 2017
 
 #define HF_MAX_STACK_SZ 512
 #define HF_MAX_CONTENT_SZ 128
-#define HF_SMALL_CONTENT_SZ 2048
+#define HF_BUF_SIZE 4096
 
 #if (NGX_DEBUG)
 #define HT_HEADF_DEBUG 1
@@ -85,7 +85,7 @@ ngx_uint_t  index;
 ngx_uint_t  starttag; 
 ngx_uint_t  tagquote;
 ngx_uint_t  tagsquote;
-ngx_uint_t  small;
+ngx_uint_t buffered;
 headfilter_stack_t stack;
 ngx_chain_t  *free;
 ngx_chain_t  *busy;
@@ -116,8 +116,19 @@ static void * ngx_http_html_head_create_conf(ngx_conf_t *cf);
 static char * ngx_http_html_head_merge_loc_conf(ngx_conf_t *cf,
 	void *parent, void *child);
 static ngx_int_t ngx_http_html_head_header_filter(ngx_http_request_t *r );
+
 static ngx_int_t ngx_http_html_head_body_filter(ngx_http_request_t *r, 
-                                                ngx_chain_t *in);
+    ngx_chain_t *in);
+
+static ngx_int_t ngx_http_html_head_output(ngx_http_request_t *r, 
+    ngx_http_html_head_filter_ctx_t *ctx);
+
+static ngx_int_t ngx_http_html_head_output_empty(ngx_http_request_t *r, 
+    ngx_http_html_head_filter_ctx_t *ctx);
+    
+static ngx_int_t ngx_http_html_head_buffer_output(ngx_http_request_t *r, 
+    ngx_http_html_head_filter_ctx_t *ctx);
+
 static ngx_int_t ngx_test_content_type(ngx_http_request_t *r);
 static ngx_int_t ngx_test_content_compression(ngx_http_request_t *r);
 static void ngx_init_stack(headfilter_stack_t *stack);
@@ -363,17 +374,13 @@ ngx_http_html_head_header_filter(ngx_http_request_t *r )
         ngx_http_set_ctx(r, ctx, ngx_http_html_head_filter_module);
     }
     
-    if(content_length < HF_SMALL_CONTENT_SZ)
-    {
-        ctx->small = 1; 
-        r->connection->buffered |= NGX_HTTP_SUB_BUFFERED;
-    }
-    
+    /* Intializes the last output chain */
     ctx->last_out = &ctx->out;
     
     return ngx_http_next_header_filter(r);
     
 }
+
 
 
 
@@ -385,14 +392,12 @@ static ngx_int_t
 ngx_http_html_head_body_filter(ngx_http_request_t *r, ngx_chain_t *in)
 {
 
-    ngx_http_html_head_filter_loc_conf_t *slcf;
-    ngx_http_html_head_filter_ctx_t *ctx;
-    ngx_chain_t  *cl;
-    ngx_buf_t  *b;
-    ngx_int_t rc;
-    u_char *empty_page = (u_char*)" \n";
-                                  
-
+    ngx_buf_t                               *b;
+    ngx_int_t                               rc;
+    ngx_http_html_head_filter_ctx_t         *ctx;
+    ngx_http_html_head_filter_loc_conf_t    *slcf;
+   
+  
     slcf = ngx_http_get_module_loc_conf(r, ngx_http_html_head_filter_module);
     ctx = ngx_http_get_module_ctx(r, ngx_http_html_head_filter_module);
 
@@ -440,17 +445,15 @@ ngx_http_html_head_body_filter(ngx_http_request_t *r, ngx_chain_t *in)
         return NGX_ERROR;
     }
 
-    if(!ctx->small)
-    {/* not small data just pass through as per normal */
-        ctx->last_out = &ctx->out;
-    }
    
     //Loop through all the incoming buffers
     while(ctx->in)
     {	
         ctx->index = 0; 
+        
         if(ctx->found == 0 && ctx->last_search == 0)
         {		 
+    
             rc = ngx_parse_buf_html(ctx, r);
             if(rc == NGX_OK)
             { //<head> is found
@@ -485,83 +488,222 @@ ngx_http_html_head_body_filter(ngx_http_request_t *r, ngx_chain_t *in)
         ctx->in = ctx->in->next;
     }
 
-	
-    //If <head> is not found and block option is enabled
-    if(ctx->last_search  && slcf->block == 1) 
+    /* html head tag found, send modified output */
+    if(ctx->found)
     {
+        return ngx_http_html_head_output(r, ctx);
+    }
+    else
+    {/* html head tag not found */
 
-        ngx_log_error(NGX_LOG_ALERT, r->connection->log, 0,
-                      "[Html_head filter]: cannot find <head> "
-                      "blocking");
-
-        cl = ngx_chain_get_free_buf(r->pool, &ctx->free);
-        
-        if (cl == NULL) 
-        {
-            ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
-                "[Html_head filter]: ngx_http_html_head_body_filter "
-                "unable to allocate output chain");
-                
-            return NGX_ERROR;
-        }
-                
-        b = cl->buf ;
-        ngx_memzero(b, sizeof(ngx_buf_t));
-
-        b->tag = (ngx_buf_tag_t) &ngx_http_html_head_filter_module;
-        b->memory=1;
-        b->pos = empty_page;
-        b->last = empty_page + ngx_strlen(empty_page);
-        b->start = b->pos;
-        b->end = b->last; 
-
-        if(r ==r->main)
-        {		
-            b->last_buf = 1;
-            b->last_in_chain = 1;
+        if(slcf->block)
+        {/* blocking enabled */
+            
+            if(ctx->count < HF_MAX_CONTENT_SZ && ctx->last == 0)
+            {/* Hasn't hit maximum characters yet and not last buffer*/
+             /* Buffer output */   
+              
+              return ngx_http_html_head_buffer_output(r, ctx);
+              
+            }
+            
+            
+            if(ctx->count >= HF_MAX_CONTENT_SZ)
+            {/*Hit maximum characters limit send empty*/
+                return ngx_http_html_head_output_empty(r, ctx);
+            }
+            
+            if(ctx->last)
+            {/* last buffer send empty*/
+                return ngx_http_html_head_output_empty(r, ctx);
+            }
+            
         }
         else
-        {
-            b->last_in_chain = 1; 
+        {/* blocking disabled send output */
+    
+            /*Log alert if last buffer*/
+            if(ctx->last)
+            {
+                ngx_log_error(NGX_LOG_ALERT, r->connection->log, 0,
+                    "[Html_head filter]: cannot find <head> "
+                    "nonblocking");
+            }
+            
+            
+            return ngx_http_html_head_output(r, ctx);
         }
-        
-        ctx->out = cl; 
-        ctx->out->next = NULL; 
-        r->keepalive = 0;
-        ctx->last = 1;
         
     }
     
-    if(ctx->small && ctx->last == 0)
-    {/* Small size data and is not last buffer */
-     /* continue to buffer up the output */
-        #if HT_HEADF_DEBUG
-        ngx_log_debug0(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
-		     "[Html_head filter]: Small data and not last buffer sending NGX_OK"); 
-        
-        #endif
-        return NGX_OK;
-    } 
     
+    /* This should not be reached*/
+    return NGX_ERROR;
+    
+}
+
+/* 
+Function to send output to the next body filter
+*/
+static ngx_int_t
+ngx_http_html_head_output(ngx_http_request_t *r, 
+    ngx_http_html_head_filter_ctx_t *ctx)
+{
+    ngx_int_t rc;
+    
+    rc = ngx_http_next_body_filter(r, ctx->out);
+    ngx_chain_update_chains(r->pool, &ctx->free, &ctx->busy, &ctx->out,
+                            (ngx_buf_tag_t)&ngx_http_html_head_filter_module);
+    
+    ctx->last_out = &ctx->out;    
+    ctx->in = NULL; 
+    
+    if(ctx->buffered && ctx->last)
+    {
+         r->connection->buffered &= ~NGX_HTTP_SUB_BUFFERED;
+    }
     
     if(ctx->last && ctx->found == 0)
     {
         r->keepalive = 0;
     }
-    
-    /* regular data or last buffer */
-    rc=ngx_http_next_body_filter(r, ctx->out);
-    ngx_chain_update_chains(r->pool, &ctx->free, &ctx->busy, &ctx->out,
-                            (ngx_buf_tag_t)&ngx_http_html_head_filter_module);
-                            
-    if (ctx->small && ctx->last)
-    {
-        r->connection->buffered &= ~NGX_HTTP_SUB_BUFFERED;
-    }                    
-    
-    ctx->in = NULL; 
-
+                                                    
     return rc;
+}
+
+
+
+/* Function to send empty page */
+static ngx_int_t
+ngx_http_html_head_output_empty(ngx_http_request_t *r, 
+    ngx_http_html_head_filter_ctx_t *ctx)
+{
+    u_char        *empty_page = (u_char*)" \n";
+    ngx_buf_t     *b;
+    ngx_int_t     rc;
+    ngx_chain_t   *cl;
+    
+    
+    ngx_log_error(NGX_LOG_ALERT, r->connection->log, 0,
+        "[Html_head filter]: cannot find <head> "
+        "blocking");
+    
+    cl = ngx_chain_get_free_buf(r->pool, &ctx->free);
+    
+    if (cl == NULL) 
+    {
+        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
+            "[Html_head filter]: ngx_http_html_head_output_empty "
+            "unable to allocate output chain");
+        return NGX_ERROR;
+    }
+    
+    b = cl->buf ;
+    b->tag = (ngx_buf_tag_t) &ngx_http_html_head_filter_module;
+    b->memory = 1;
+    b->pos = empty_page;
+    b->last = empty_page + ngx_strlen(empty_page);
+    b->start = b->pos;
+    b->end = b->last; 
+    b->recycled = 1; 
+    b->last_buf = 1;
+    b->last_in_chain = 1;
+    
+    ctx->out = cl;
+    ctx->out->next = NULL; 
+    r->keepalive = 0;
+    ctx->last = 1;
+
+    
+    rc = ngx_http_next_body_filter(r, ctx->out);
+    ngx_chain_update_chains(r->pool, &ctx->free, &ctx->busy, &ctx->out,
+        (ngx_buf_tag_t)&ngx_http_html_head_filter_module);
+        
+    
+    if(ctx->buffered)
+    {
+         r->connection->buffered &= ~NGX_HTTP_SUB_BUFFERED;
+    }
+    
+    return rc; 
+}
+
+/* Function to buffer output */
+static ngx_int_t
+ngx_http_html_head_buffer_output(ngx_http_request_t *r, 
+    ngx_http_html_head_filter_ctx_t *ctx)
+{
+    size_t        sz, alloc_sz; 
+    ngx_chain_t   *cl, *tmp, **ll;
+    
+    
+    if(ctx->buffered == 0)
+    {
+        ctx->buffered = 1;
+        r->connection->buffered |= NGX_HTTP_SUB_BUFFERED;
+    }
+    
+    
+    ll = &ctx->out; 
+    tmp = ctx->out; 
+    
+    
+    /* Replace all the output chain buffers with our own*/
+    while(tmp)
+    {
+        cl = ngx_chain_get_free_buf(r->pool, &ctx->free);
+        
+        if (cl == NULL) 
+        {
+            ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
+                "[Html_head filter]: ngx_http_html_head_buffer_output "
+                "unable to allocate output chain");
+                
+            return NGX_ERROR;
+        }
+        
+        /* Size the memory for buf data*/
+        sz = ngx_buf_size(tmp->buf);
+        alloc_sz = HF_BUF_SIZE;
+        while (sz > alloc_sz)
+        {
+            alloc_sz = alloc_sz * 2; 
+        }
+        
+        cl->buf->start =  ngx_palloc(r->pool, alloc_sz);
+        
+        if(cl->buf->start == NULL)
+        {
+            ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
+                "[Html_head filter]: ngx_http_html_head_buffer_output "
+                "unable to allocate output chain buffer data");
+                
+            return NGX_ERROR;
+            
+        }
+        
+        cl->buf->pos  = cl->buf->start; 
+        cl->buf->last = cl->buf->start;
+        cl->buf->end = cl->buf->start + alloc_sz; 
+        cl->buf->tag = (ngx_buf_tag_t) &ngx_http_html_head_filter_module;
+        cl->buf->recycled = 1; 
+        cl->buf->temporary = 1; 
+        
+        cl->buf->last = ngx_copy(cl->buf->last, tmp->buf->pos, sz);
+        
+        /* Attach our own buffer chain to our context output chain */
+        *ll = cl;
+        ll = &cl->next;
+        
+        /* Consume the output chain buffer */
+        tmp->buf->pos = tmp->buf->last;
+        tmp = tmp->next; 
+    }
+    
+    /* Update the last output chain address to our own chain*/
+    ctx->last_out = ll; 
+    
+    return NGX_OK; 
     
 }
 
