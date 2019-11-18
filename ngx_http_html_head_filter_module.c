@@ -753,13 +753,14 @@ ngx_html_insert_output(ngx_http_html_head_filter_ctx_t *ctx,
     }
 
     b=cl->buf;
-    ngx_memzero(b, sizeof(ngx_buf_t));
-
+   
     b->tag = (ngx_buf_tag_t) &ngx_http_html_head_filter_module;
     b->memory=1;
     b->pos = ctx->in->buf->pos;
     b->last = b->pos + ctx->index + 1;
-    b->recycled = ctx->in->buf->recycled;
+    b->start = ctx->in->buf->start;
+    b->end = ctx->in->buf->end;
+    b->recycled = 1;
     b->flush = ctx->in->buf->flush; 
        
     *ll = cl;  
@@ -777,13 +778,14 @@ ngx_html_insert_output(ngx_http_html_head_filter_ctx_t *ctx,
     }
 
     b=cl->buf;
-    ngx_memzero(b, sizeof(ngx_buf_t));
-	 
+   
     b->tag = (ngx_buf_tag_t) &ngx_http_html_head_filter_module;
     b->memory=1;
     b->pos=slcf->insert_text.data;
     b->last=b->pos + slcf->insert_text.len;
-    b->recycled = ctx->in->buf->recycled;
+    b->start = b->pos;
+    b->end = b->last; 
+    b->recycled = 1;
 	 
     *ll = cl;
     ll = &cl->next;
@@ -795,15 +797,15 @@ ngx_html_insert_output(ngx_http_html_head_filter_ctx_t *ctx,
         b->last_buf = ctx->in->buf->last_buf;
         b->last_in_chain = ctx->in->buf->last_in_chain;
 		 
-        *ll = ctx->in->next; 
+        *ll = ctx->in->next;
+        
+        if(ctx->in->buf->recycled)
+        {//consume existing buffer
+            ctx->in->buf->pos = ctx->in->buf->last;  
+        }
 		
-	    if(ctx->in->buf->recycled)
-	    {//consume existing buffer
-	        ctx->in->buf->pos = ctx->in->buf->last;
-	    }
 	    ctx->in = ctx_in_new;
 	    return NGX_OK;
-		
     }
      
     
@@ -820,24 +822,26 @@ ngx_html_insert_output(ngx_http_html_head_filter_ctx_t *ctx,
     }
 
     b=cl->buf;
-    ngx_memzero(b, sizeof(ngx_buf_t));
 
     b->tag = (ngx_buf_tag_t) &ngx_http_html_head_filter_module;
     b->memory=1;
     b->pos = ctx->in->buf->pos + ctx->index + 1;
     b->last = ctx->in->buf->last;
-    b->recycled = ctx->in->buf->recycled;
+    b->start = ctx->in->buf->start;
+    b->end = ctx->in->buf->end;
+    b->recycled = 1;
     b->last_buf = ctx->in->buf->last_buf;
     b->last_in_chain = ctx->in->buf->last_in_chain;
 
     *ll = cl;
     ll = &cl->next;
     *ll = ctx->in->next;
-	 
+    
     if(ctx->in->buf->recycled)
     {//consume existing buffer
-        ctx->in->buf->pos = ctx->in->buf->last;	
+        ctx->in->buf->pos = ctx->in->buf->last; 
     }
+	 
 	 
     ctx->in = ctx_in_new; 
 	   
@@ -1236,8 +1240,5 @@ push(u_char c, headfilter_stack_t *stack)
     stack->data[stack->top] = c;
     return 0;    
 }
-
-
-
 
 
