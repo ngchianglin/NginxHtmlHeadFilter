@@ -17,7 +17,7 @@ This directive enables the html head filter module. The argument "text string" w
 
 **html_head_filter_block** on/off
 
-This is an optional directive. If it is set to on, the module will display a blank html page if the &lt;head&gt; tag is not found within the first 512 characters of a HTTP response. By default , if omitted, this directive is off. 
+This is an optional directive. If it is set to on, the module will display a blank html page if the &lt;head&gt; tag is not found within the first 128 characters of a HTTP response. By default , if omitted, this directive is off. 
 
 
 ## Compiling and Installation
