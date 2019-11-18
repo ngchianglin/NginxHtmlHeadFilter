@@ -578,7 +578,7 @@ static ngx_int_t
 ngx_http_html_head_output_empty(ngx_http_request_t *r, 
     ngx_http_html_head_filter_ctx_t *ctx)
 {
-    u_char        *empty_page = (u_char*)" \n";
+    u_char        *empty_page = (u_char*)"\n";
     ngx_buf_t     *b;
     ngx_int_t     rc;
     ngx_chain_t   *cl;
@@ -602,7 +602,8 @@ ngx_http_html_head_output_empty(ngx_http_request_t *r,
     b->tag = (ngx_buf_tag_t) &ngx_http_html_head_filter_module;
     b->memory = 1;
     b->pos = empty_page;
-    b->last = empty_page + ngx_strlen(empty_page);
+    /* length of our empty page is only 1 character "\n" */
+    b->last = empty_page + 1;
     b->start = b->pos;
     b->end = b->last; 
     b->recycled = 1; 
@@ -613,7 +614,6 @@ ngx_http_html_head_output_empty(ngx_http_request_t *r,
     ctx->out->next = NULL; 
     r->keepalive = 0;
     ctx->last = 1;
-
     
     rc = ngx_http_next_body_filter(r, ctx->out);
     ngx_chain_update_chains(r->pool, &ctx->free, &ctx->busy, &ctx->out,
@@ -841,8 +841,7 @@ ngx_html_insert_output(ngx_http_html_head_filter_ctx_t *ctx,
     {//consume existing buffer
         ctx->in->buf->pos = ctx->in->buf->last; 
     }
-	 
-	 
+	  
     ctx->in = ctx_in_new; 
 	   
     return NGX_OK;
