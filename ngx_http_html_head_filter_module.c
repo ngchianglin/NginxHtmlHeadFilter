@@ -657,8 +657,8 @@ ngx_http_html_head_output_empty(ngx_http_request_t *r,
     
     
     ngx_log_error(NGX_LOG_ALERT, r->connection->log, 0,
-        "[Html_head filter]: cannot find <head> "
-        "blocking");
+        "[Html_head filter]: ngx_http_html_head_output_empty: "
+        "cannot find <head> blocking");
         
     content_length = r->headers_out.content_length_n; 
     
@@ -668,7 +668,7 @@ ngx_http_html_head_output_empty(ngx_http_request_t *r,
     {
         #if HT_HEADF_DEBUG
             ngx_log_debug0(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
-                "[Html_head filter]: ngx_http_html_head_output_empty "
+                "[Html_head filter]: ngx_http_html_head_output_empty: "
                 "Unsafe content length detected, setting to sane value" 
                 );
         #endif 
@@ -690,14 +690,14 @@ ngx_http_html_head_output_empty(ngx_http_request_t *r,
     if (empty_content == NULL) 
     {
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
-            "[Html_head filter]: ngx_http_html_head_output_empty "
-            "unable to allocate empty content");
+            "[Html_head filter]: ngx_http_html_head_output_empty: "
+            "unable to allocate empty content memory");
         return NGX_ERROR;
     }
     
     #if HT_HEADF_DEBUG
         ngx_log_debug3(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
-            "[Html_head filter]: ngx_http_html_head_output_empty "
+            "[Html_head filter]: ngx_http_html_head_output_empty: "
             "content length: %ui quotient: %ui remainder: %ui", 
             content_length, quotient, remainder);
     #endif         
@@ -712,8 +712,8 @@ ngx_http_html_head_output_empty(ngx_http_request_t *r,
         if (cl == NULL) 
         {
             ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
-                "[Html_head filter]: ngx_http_html_head_output_empty "
-                "unable to allocate output chain");
+                "[Html_head filter]: ngx_http_html_head_output_empty: "
+                "unable to allocate output chain memory");
             return NGX_ERROR;
         }
     
