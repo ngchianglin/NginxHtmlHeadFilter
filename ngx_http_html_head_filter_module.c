@@ -53,6 +53,7 @@ Dec 2017
 #define HF_MAX_STACK_SZ 512
 #define HF_MAX_CONTENT_SZ 128
 #define HF_BUF_SIZE 4096
+#define HF_MAX_CONTENT_LENGTH 1024 * 1024 * 1024
 
 #if (NGX_DEBUG)
 #define HT_HEADF_DEBUG 1
@@ -589,8 +590,25 @@ ngx_http_html_head_output_empty(ngx_http_request_t *r,
     ngx_log_error(NGX_LOG_ALERT, r->connection->log, 0,
         "[Html_head filter]: cannot find <head> "
         "blocking");
-    
+        
     content_length = r->headers_out.content_length_n; 
+    
+    /* Ensure that content length is a sane value */    
+    if (r->headers_out.content_length_n == -1 
+        || content_length > HF_MAX_CONTENT_LENGTH)
+    {
+        #if HT_HEADF_DEBUG
+            ngx_log_debug0(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
+                "[Html_head filter]: ngx_http_html_head_output_empty "
+                "Unsafe content length detected, setting to sane value" 
+                );
+        #endif 
+
+        content_length = HF_BUF_SIZE; 
+        r->keepalive = 0;
+    }        
+    
+  
     quotient = content_length / HF_BUF_SIZE;
     remainder = content_length % HF_BUF_SIZE; 
     
@@ -607,6 +625,14 @@ ngx_http_html_head_output_empty(ngx_http_request_t *r,
             "unable to allocate empty content");
         return NGX_ERROR;
     }
+    
+    #if HT_HEADF_DEBUG
+        ngx_log_debug3(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
+            "[Html_head filter]: ngx_http_html_head_output_empty "
+            "content length: %ui quotient: %ui remainder: %ui", 
+            content_length, quotient, remainder);
+    #endif         
+    
     
     ll = &ctx->out; 
     
