@@ -221,7 +221,7 @@ ngx_http_html_head_create_conf(ngx_conf_t *cf)
     if(conf == NULL)
     {
         ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
-            "[Html_head filter]: ngx_http_html_head_create_conf "
+            "[Html_head filter]: ngx_http_html_head_create_conf: "
             " cannot allocate memory for config");
         return NGX_CONF_ERROR;
     }
@@ -280,7 +280,7 @@ ngx_http_html_head_header_filter(ngx_http_request_t *r )
     {
         #if HT_HEADF_DEBUG
             ngx_log_debug0(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
-                "[Html_head filter]: ngx_http_html_head_header_filter "
+                "[Html_head filter]: ngx_http_html_head_header_filter: "
                 "null configuration");
         #endif
        
@@ -292,7 +292,8 @@ ngx_http_html_head_header_filter(ngx_http_request_t *r )
     {
         #if HT_HEADF_DEBUG
             ngx_log_debug0(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
-                "[Html_head filter]: empty configuration insert text");
+                "[Html_head filter]: ngx_http_html_head_header_filter: "
+                " empty configuration insert text");
         #endif
         
         return ngx_http_next_header_filter(r);
@@ -305,8 +306,8 @@ ngx_http_html_head_header_filter(ngx_http_request_t *r )
     {
         #if HT_HEADF_DEBUG
             ngx_log_debug0(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
-                "[Html_head filter]: empty content type or "
-                "header only ");
+                "[Html_head filter]: ngx_http_html_head_header_filter: "
+                "empty content type or header only ");
         #endif
         
         return ngx_http_next_header_filter(r);
@@ -317,7 +318,8 @@ ngx_http_html_head_header_filter(ngx_http_request_t *r )
     {
         #if HT_HEADF_DEBUG
             ngx_log_debug0(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
-                "[Html_head filter]: content type not html");
+                "[Html_head filter]: ngx_http_html_head_header_filter: "
+                "content type not html");
         #endif            
         
         return ngx_http_next_header_filter(r);
@@ -325,17 +327,25 @@ ngx_http_html_head_header_filter(ngx_http_request_t *r )
 
     
     if(ngx_test_content_compression(r) != 0)
-    {//Compression enabled, don't filter   
-        ngx_log_error(NGX_LOG_WARN, r->connection->log, 0, 
-                     "[Html_head filter]: compression enabled");
+    {/* Compression enabled, don't filter  */ 
+
+        #if HT_HEADF_DEBUG
+            ngx_log_debug0(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
+                "[Html_head filter]: ngx_http_html_head_header_filter: "
+                "compression enabled");
+        #endif    
                      
         return ngx_http_next_header_filter(r);
     }
  
     if(r->headers_out.status != NGX_HTTP_OK)
-    {//Response is not HTTP 200   
-        ngx_log_error(NGX_LOG_WARN, r->connection->log, 0, 
-                     "[Html_head filter]: http response is not 200");
+    {/* Response is not HTTP 200   */
+
+        #if HT_HEADF_DEBUG
+            ngx_log_debug0(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
+                "[Html_head filter]: ngx_http_html_head_header_filter: "
+                "http response is not 200");
+        #endif   
                      
         return ngx_http_next_header_filter(r);
     }
@@ -346,13 +356,15 @@ ngx_http_html_head_header_filter(ngx_http_request_t *r )
     {//Main request
         content_length = r->headers_out.content_length_n + 
             slcf->insert_text.len;
+            
         #if HT_HEADF_DEBUG
             ngx_log_debug2(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
-                "[Html_head filter]: content length prev : %ui, new : %ui", 
+                "[Html_head filter]: ngx_http_html_head_header_filter: "
+                "content length prev : %ui, new : %ui", 
 				r->headers_out.content_length_n,
-				content_length
-				);
-        #endif           
+				content_length);
+        #endif 
+        
         r->headers_out.content_length_n = content_length;      
     }
     
@@ -361,13 +373,15 @@ ngx_http_html_head_header_filter(ngx_http_request_t *r )
     if(ctx == NULL)
     {
         ctx = ngx_pcalloc(r->pool, 
-                          sizeof(ngx_http_html_head_filter_ctx_t)); 
+                sizeof(ngx_http_html_head_filter_ctx_t)); 
         
         if(ctx == NULL)
         {
-            ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
-                          "[Html_head filter]: cannot allocate ctx"
-                          " memory");
+            #if HT_HEADF_DEBUG
+                ngx_log_debug0(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
+                "[Html_head filter]: ngx_http_html_head_header_filter: "
+                "cannot allocate ctx memory");
+            #endif 
                           
             return ngx_http_next_header_filter(r);
         }
