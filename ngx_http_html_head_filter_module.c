@@ -786,8 +786,8 @@ ngx_http_html_head_buffer_output(ngx_http_request_t *r,
         if (cl == NULL) 
         {
             ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
-                "[Html_head filter]: ngx_http_html_head_buffer_output "
-                "unable to allocate output chain");
+                "[Html_head filter]: ngx_http_html_head_buffer_output: "
+                "unable to allocate output chain memory");
                 
             return NGX_ERROR;
         }
@@ -805,8 +805,8 @@ ngx_http_html_head_buffer_output(ngx_http_request_t *r,
         if(cl->buf->start == NULL)
         {
             ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
-                "[Html_head filter]: ngx_http_html_head_buffer_output "
-                "unable to allocate output chain buffer data");
+                "[Html_head filter]: ngx_http_html_head_buffer_output: "
+                "unable to allocate output chain buffer data memory");
                 
             return NGX_ERROR;
             
