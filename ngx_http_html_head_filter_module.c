@@ -996,8 +996,8 @@ ngx_parse_buf_html(ngx_http_html_head_filter_ctx_t *ctx,
     if(ctx->in == NULL)
     {
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
-            "[Html_head filter]: ngx_parse_buf_html "
-            "unable to parse html ctx->in is NULL");  
+            "[Html_head filter]: ngx_parse_buf_html: "
+            "ctx->in is NULL");  
             
         return NGX_ERROR;
     }
@@ -1012,9 +1012,8 @@ ngx_parse_buf_html(ngx_http_html_head_filter_ctx_t *ctx,
         {
             ngx_log_error(NGX_LOG_WARN, 
                r->connection->log, 0, 
-               "[Html_head filter]: ngx_parse_buf_html unable "
-               "to find <head> tag within 128 "
-               "characters");  
+               "[Html_head filter]: ngx_parse_buf_html: "
+               "unable to find <head> tag within 128 characters");
                
             return NGX_ERROR;
         } 
@@ -1032,7 +1031,7 @@ ngx_parse_buf_html(ngx_http_html_head_filter_ctx_t *ctx,
                 if(push(c, &ctx->stack) == -1)
                 {
                       ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
-                        "[Html_head filter]: ngx_parse_buf_html "
+                        "[Html_head filter]: ngx_parse_buf_html: "
                         "parse stack is full");  
                          
                       return NGX_ERROR;
@@ -1047,7 +1046,7 @@ ngx_parse_buf_html(ngx_http_html_head_filter_ctx_t *ctx,
                     if(push(c, &ctx->stack) == -1)
                     {
                         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
-                            "[Html_head filter]: ngx_parse_buf_html "
+                            "[Html_head filter]: ngx_parse_buf_html: "
                             "parse stack is full");  
                             
                         return NGX_ERROR;
@@ -1081,7 +1080,7 @@ ngx_parse_buf_html(ngx_http_html_head_filter_ctx_t *ctx,
                     if(push(c, &ctx->stack) == -1)
                     {
                         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
-                            "[Html_head filter]: ngx_parse_buf_html "
+                            "[Html_head filter]: ngx_parse_buf_html: "
                             "parse stack is full");  
                             
                         return NGX_ERROR;
@@ -1093,7 +1092,7 @@ ngx_parse_buf_html(ngx_http_html_head_filter_ctx_t *ctx,
                     if(push(c, &ctx->stack) == -1)
                     {
                          ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
-                            "[Html_head filter]: ngx_parse_buf_html "
+                            "[Html_head filter]: ngx_parse_buf_html: "
                             "parse stack is full");
                             
                         return NGX_ERROR;
@@ -1105,7 +1104,7 @@ ngx_parse_buf_html(ngx_http_html_head_filter_ctx_t *ctx,
                     if(push(c, &ctx->stack) == -1)
                     {
                         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
-                            "[Html_head filter]: ngx_parse_buf_html "
+                            "[Html_head filter]: ngx_parse_buf_html: "
                             "parse stack is full");
                             
                         return NGX_ERROR;
@@ -1122,7 +1121,7 @@ ngx_parse_buf_html(ngx_http_html_head_filter_ctx_t *ctx,
                     if(push(c, &ctx->stack) == -1)
                     {
                         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
-                            "[Html_head filter]: ngx_parse_buf_html "
+                            "[Html_head filter]: ngx_parse_buf_html: "
                             "parse stack is full");
                             
                         return NGX_ERROR;
@@ -1134,7 +1133,7 @@ ngx_parse_buf_html(ngx_http_html_head_filter_ctx_t *ctx,
                     if(push(c, &ctx->stack) == -1)
                     {
                          ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
-                            "[Html_head filter]: ngx_parse_buf_html "
+                            "[Html_head filter]: ngx_parse_buf_html: "
                             "parse stack is full");
                             
                         return NGX_ERROR;
@@ -1145,7 +1144,7 @@ ngx_parse_buf_html(ngx_http_html_head_filter_ctx_t *ctx,
                     if(push(c, &ctx->stack) == -1)
                     {
                         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
-                            "[Html_head filter]: ngx_parse_buf_html "
+                            "[Html_head filter]: ngx_parse_buf_html: "
                             "parse stack is full");
                             
                         return NGX_ERROR;
@@ -1161,7 +1160,7 @@ ngx_parse_buf_html(ngx_http_html_head_filter_ctx_t *ctx,
                     if(push(c, &ctx->stack) == -1)
                     {
                          ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
-                            "[Html_head filter]: ngx_parse_buf_html "
+                            "[Html_head filter]: ngx_parse_buf_html: "
                             "parse stack is full");
                             
                         return NGX_ERROR;
