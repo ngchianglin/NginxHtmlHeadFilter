@@ -853,8 +853,8 @@ ngx_html_insert_output(ngx_http_html_head_filter_ctx_t *ctx,
     if(ctx->in == NULL)
     {
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
-             "[Html_head filter]: ngx_html_insert_output "
-             "text Insertion ctx->in is NULL");
+             "[Html_head filter]: ngx_html_insert_output: "
+             "ctx->in is NULL");
              
         return NGX_ERROR;
     }
@@ -866,7 +866,7 @@ ngx_html_insert_output(ngx_http_html_head_filter_ctx_t *ctx,
     if(b->pos + ctx->index + 1 > b->last)
     {//Check that the head tag position does not exceed buffer
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
-            "[Html_head filter]: ngx_html_insert_output "
+            "[Html_head filter]: ngx_html_insert_output: "
             "invalid input buffer at text insertion");
             
         return NGX_ERROR;          
@@ -876,8 +876,8 @@ ngx_html_insert_output(ngx_http_html_head_filter_ctx_t *ctx,
     if (cl == NULL) 
     {
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
-            "[Html_head filter]: ngx_html_insert_output "
-            "unable to allocate output chain");
+            "[Html_head filter]: ngx_html_insert_output: "
+            "unable to allocate output chain memory");
             
         return NGX_ERROR;
     }
@@ -901,8 +901,8 @@ ngx_html_insert_output(ngx_http_html_head_filter_ctx_t *ctx,
     if (cl == NULL) 
     {
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
-             "[Html_head filter]: ngx_html_insert_output "
-             "unable to allocate output chain");
+             "[Html_head filter]: ngx_html_insert_output: "
+             "unable to allocate output chain memory");
              
         return NGX_ERROR;
     }
@@ -945,8 +945,8 @@ ngx_html_insert_output(ngx_http_html_head_filter_ctx_t *ctx,
     if (cl == NULL) 
     {
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
-            "[Html_head filter]: ngx_html_insert_output unable to allocate "
-            "output chain");
+            "[Html_head filter]: ngx_html_insert_output: "
+            "unable to allocate output chain memory");
             
         return NGX_ERROR;
     }
