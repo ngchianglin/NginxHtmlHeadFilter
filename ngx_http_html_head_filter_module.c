@@ -421,7 +421,7 @@ ngx_http_html_head_body_filter(ngx_http_request_t *r, ngx_chain_t *in)
     {
         #if HT_HEADF_DEBUG
             ngx_log_debug0(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
-                "[Html_head filter]: ngx_http_html_head_body_filter "
+                "[Html_head filter]: ngx_http_html_head_body_filter: "
                 "null configuration");
         #endif
        
@@ -433,7 +433,7 @@ ngx_http_html_head_body_filter(ngx_http_request_t *r, ngx_chain_t *in)
     {
         #if HT_HEADF_DEBUG
             ngx_log_debug0(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
-                "[Html_head filter]: ngx_http_html_head_body_filter "
+                "[Html_head filter]: ngx_http_html_head_body_filter: "
                 "unable to get module ctx");
         #endif           
             
@@ -443,9 +443,12 @@ ngx_http_html_head_body_filter(ngx_http_request_t *r, ngx_chain_t *in)
 
     if(in == NULL)
     {
-       ngx_log_error(NGX_LOG_WARN, r->connection->log, 0, 
-            "[Html_head filter]: input chain is null");
-                     
+        #if HT_HEADF_DEBUG
+            ngx_log_debug0(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
+                "[Html_head filter]: ngx_http_html_head_body_filter: "
+                "input chain is null");
+        #endif     
+        
        return ngx_http_next_body_filter(r, in);
     }
 	
@@ -454,8 +457,8 @@ ngx_http_html_head_body_filter(ngx_http_request_t *r, ngx_chain_t *in)
     if (ngx_chain_add_copy(r->pool, &ctx->in, in) != NGX_OK) 
     {
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
-            "[Html_head filter]: unable to copy"
-            " input chain - in");
+            "[Html_head filter]: ngx_http_html_head_body_filter: "
+            "unable to copy input chain - in");
                      
         return NGX_ERROR;
     }
