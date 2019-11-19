@@ -550,7 +550,62 @@ static ngx_int_t
 ngx_http_html_head_output(ngx_http_request_t *r, 
     ngx_http_html_head_filter_ctx_t *ctx)
 {
-    ngx_int_t rc;
+    u_char                                  *padding;
+    ngx_buf_t                               *b;
+    ngx_int_t                               rc;
+    ngx_chain_t                             *cl;
+    ngx_http_html_head_filter_loc_conf_t    *slcf;
+   
+  
+    slcf = ngx_http_get_module_loc_conf(r, ngx_http_html_head_filter_module);
+    
+    if(slcf == NULL)
+    {
+        #if HT_HEADF_DEBUG
+            ngx_log_debug0(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
+                "[Html_head filter]: ngx_http_html_head_output "
+                "null configuration");
+        #endif
+       
+        return NGX_ERROR;
+    }
+    
+
+    if(ctx->last && ctx->found == 0)
+    {/* Append additional buffer to make up for content length */
+     
+        cl = ngx_chain_get_free_buf(r->pool, &ctx->free);
+        if (cl == NULL) 
+        {
+            ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
+                "[Html_head filter]:  ngx_http_html_head_output "
+                "unable to allocate output chain");
+            return NGX_ERROR;
+        }
+        
+        padding = ngx_pcalloc(r->pool, sizeof(u_char) * slcf->insert_text.len);
+        if (padding == NULL)
+        {
+            ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
+                "[Html_head filter]:  ngx_http_html_head_output "
+                "unable to allocate output buffer data");
+            return NGX_ERROR;
+        }
+    
+        b = cl->buf;
+        b->tag = (ngx_buf_tag_t) &ngx_http_html_head_filter_module;
+        b->memory = 1;
+        b->pos = padding;
+        b->last = padding + (sizeof(u_char) * slcf->insert_text.len);
+        b->start = b->pos;
+        b->end = b->last; 
+        b->recycled = 1; 
+        b->last_buf = (r == r->main) ? 1: 0;
+        b->last_in_chain = 1;
+    
+        *ctx->last_out = cl;
+        ctx->last_out = &cl->next;
+    }
     
     rc = ngx_http_next_body_filter(r, ctx->out);
     ngx_chain_update_chains(r->pool, &ctx->free, &ctx->busy, &ctx->out,
@@ -564,10 +619,6 @@ ngx_http_html_head_output(ngx_http_request_t *r,
          r->connection->buffered &= ~NGX_HTTP_SUB_BUFFERED;
     }
     
-    if(ctx->last && ctx->found == 0)
-    {
-        r->keepalive = 0;
-    }
                                                     
     return rc;
 }
@@ -652,7 +703,7 @@ ngx_http_html_head_output_empty(ngx_http_request_t *r,
         b->tag = (ngx_buf_tag_t) &ngx_http_html_head_filter_module;
         b->memory = 1;
         b->pos = empty_content;
-        b->last = empty_content + HF_BUF_SIZE;
+        b->last = empty_content + (sizeof(u_char) * HF_BUF_SIZE);
         b->start = b->pos;
         b->end = b->last; 
         b->recycled = 1; 
