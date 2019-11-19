@@ -578,11 +578,10 @@ ngx_http_html_head_output(ngx_http_request_t *r,
     
     if(slcf == NULL)
     {
-        #if HT_HEADF_DEBUG
-            ngx_log_debug0(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
-                "[Html_head filter]: ngx_http_html_head_output "
-                "null configuration");
-        #endif
+        
+        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
+            "[Html_head filter]: ngx_http_html_head_output: "
+            "null configuration");
        
         return NGX_ERROR;
     }
@@ -595,8 +594,9 @@ ngx_http_html_head_output(ngx_http_request_t *r,
         if (cl == NULL) 
         {
             ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
-                "[Html_head filter]:  ngx_http_html_head_output "
-                "unable to allocate output chain");
+                "[Html_head filter]:  ngx_http_html_head_output: "
+                "unable to allocate output chain memory");
+                
             return NGX_ERROR;
         }
         
@@ -604,8 +604,9 @@ ngx_http_html_head_output(ngx_http_request_t *r,
         if (padding == NULL)
         {
             ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
-                "[Html_head filter]:  ngx_http_html_head_output "
-                "unable to allocate output buffer data");
+                "[Html_head filter]:  ngx_http_html_head_output: "
+                "unable to allocate output buffer data memory");
+                
             return NGX_ERROR;
         }
     
