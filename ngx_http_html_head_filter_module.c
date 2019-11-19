@@ -1197,7 +1197,7 @@ ngx_process_tag(ngx_http_html_head_filter_ctx_t *ctx,
     if(push('\0', &ctx->stack) == -1)
     {
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
-            "[Html_head filter]: ngx_process_tag "
+            "[Html_head filter]: ngx_process_tag: "
             "parse stack is full");  
                      
         return NGX_ERROR;
@@ -1258,8 +1258,8 @@ ngx_test_content_type(ngx_http_request_t *r)
     if(tmp.data == NULL)
     {
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
-            "[Html_head filter]: ngx_test_content_type "
-            "cannot allocate buffer for content type check");
+            "[Html_head filter]: ngx_test_content_type: "
+            "cannot allocate buffer memory for content type check");
         return 0;
     }
 
@@ -1303,15 +1303,14 @@ ngx_test_content_compression(ngx_http_request_t *r)
     if(tmp.data == NULL)
     {
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
-            "[Html_head filter]: ngx_test_content_compression"
-            " cannot allocate buffer for compression check");
+            "[Html_head filter]: ngx_test_content_compression: "
+            "cannot allocate buffer memory for compression check");
             
         return 0;
     }
 
     ngx_strlow(tmp.data, 
-               r->headers_out.content_encoding->value.data, tmp.len); 
-
+        r->headers_out.content_encoding->value.data, tmp.len); 
 
     
     if( tmp.len >= (sizeof("gzip") -1) && 
