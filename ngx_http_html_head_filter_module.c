@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2017 Ng Chiang Lin
+ * Copyright (C) 2017 - 2019 Ng Chiang Lin
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -38,10 +38,18 @@ allows a blank page to be shown if
 the <head> tag is not found. If there is
 more than one <head> tag, the text will
 be inserted only after the first <head>
-tag. 
+tag. Html document or content that exceeds
+1GB (1024 x 1024 x 1024) in size will be skipped
+by the filter module. 
+The filter module will also skip content types
+that are not text/html. 
+The HTTP response code must be HTTP 200, other 
+response codes like HTTP 404, 403, 500 etc... are
+skipped by the module.  
+
 
 Ng Chiang Lin
-Dec 2017
+Updated Nov 2019
 
 */
 
@@ -302,12 +310,13 @@ ngx_http_html_head_header_filter(ngx_http_request_t *r )
 
     if(r->headers_out.content_type.len == 0 || 
         r->headers_out.content_length_n == 0 ||
-        r->header_only )
+        r->header_only || 
+        r->headers_out.content_length_n > HF_MAX_CONTENT_LENGTH )
     {
         #if HT_HEADF_DEBUG
             ngx_log_debug0(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
                 "[Html_head filter]: ngx_http_html_head_header_filter: "
-                "empty content type or header only ");
+                "empty content type, header only, invalid content length");
         #endif
         
         return ngx_http_next_header_filter(r);
@@ -506,12 +515,8 @@ ngx_http_html_head_body_filter(ngx_http_request_t *r, ngx_chain_t *in)
         ctx->in = ctx->in->next;
     }
 
-    /* html head tag found, send modified output */
-    if(ctx->found)
-    {
-        return ngx_http_html_head_output(r, ctx);
-    }
-    else
+    
+    if(!ctx->found)
     {/* html head tag not found */
 
         if(slcf->block)
@@ -555,8 +560,8 @@ ngx_http_html_head_body_filter(ngx_http_request_t *r, ngx_chain_t *in)
     }
     
     
-    /* This should not be reached*/
-    return NGX_ERROR;
+    /* html head tag found, send modified output */
+    return  ngx_http_html_head_output(r, ctx);;
     
 }
 
@@ -1367,5 +1372,6 @@ push(u_char c, headfilter_stack_t *stack)
     stack->data[stack->top] = c;
     return 0;    
 }
+
 
 
