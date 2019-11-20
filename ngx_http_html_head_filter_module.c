@@ -39,7 +39,7 @@ the <head> tag is not found. If there is
 more than one <head> tag, the text will
 be inserted only after the first <head>
 tag. Html document or content that exceeds
-1GB (1024 x 1024 x 1024) in size will be skipped
+100MB (100 x 1024 x 1024) in size will be skipped
 by the filter module. 
 The filter module will also skip content types
 that are not text/html. 
@@ -61,7 +61,7 @@ Updated Nov 2019
 #define HF_MAX_STACK_SZ 512
 #define HF_MAX_CONTENT_SZ 128
 #define HF_BUF_SIZE 4096
-#define HF_MAX_CONTENT_LENGTH 1024 * 1024 * 1024
+#define HF_MAX_CONTENT_LENGTH 100 * 1024 * 1024
 
 #if (NGX_DEBUG)
 #define HT_HEADF_DEBUG 1
