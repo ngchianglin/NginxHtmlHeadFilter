@@ -462,7 +462,7 @@ ngx_http_html_head_body_filter(ngx_http_request_t *r, ngx_chain_t *in)
     }
 	
    
-    //Copy the incoming chain to ctx-in
+    /* Copy the incoming chain to ctx-in */
     if (ngx_chain_add_copy(r->pool, &ctx->in, in) != NGX_OK) 
     {
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
@@ -473,7 +473,7 @@ ngx_http_html_head_body_filter(ngx_http_request_t *r, ngx_chain_t *in)
     }
     
     
-    //Loop through all the incoming buffers
+    /* Loop through and process all the incoming buffers */
     while(ctx->in)
     {	
         ctx->index = 0; 
@@ -483,7 +483,7 @@ ngx_http_html_head_body_filter(ngx_http_request_t *r, ngx_chain_t *in)
     
             rc = ngx_parse_buf_html(ctx, r);
             if(rc == NGX_OK)
-            { //<head> is found
+            { /* <head> is found */
                 ctx->found = 1; 
                 rc=ngx_html_insert_output(ctx, r, slcf);
 			   
@@ -501,8 +501,7 @@ ngx_http_html_head_body_filter(ngx_http_request_t *r, ngx_chain_t *in)
         b = ctx->in->buf;
 
         if(b->last_buf || b->last_in_chain)
-        {//Last buffer and <head> not found
-         //even if content is less than 128 chars
+        {/* Last buffer and <head> not found */
            ctx->last = 1; 
            if(!ctx->found)
            {
@@ -520,39 +519,31 @@ ngx_http_html_head_body_filter(ngx_http_request_t *r, ngx_chain_t *in)
     {/* html head tag not found */
 
         if(slcf->block)
-        {/* blocking enabled */
+        {/* blocking mode */
             
             if(ctx->count < HF_MAX_CONTENT_SZ && ctx->last == 0)
             {/* Hasn't hit maximum characters yet and not last buffer*/
-             /* Buffer output */   
-              
-              return ngx_http_html_head_buffer_output(r, ctx);
-              
+        
+                /* Buffer output */   
+                return ngx_http_html_head_buffer_output(r, ctx);
             }
             
-            
-            if(ctx->count >= HF_MAX_CONTENT_SZ)
-            {/*Hit maximum characters limit send empty*/
-                return ngx_http_html_head_output_empty(r, ctx);
-            }
-            
-            if(ctx->last)
-            {/* last buffer send empty*/
+            if(ctx->count >= HF_MAX_CONTENT_SZ || ctx->last)
+            {/* Hit maximum characters limit or last buffer send empty page */
                 return ngx_http_html_head_output_empty(r, ctx);
             }
             
         }
         else
-        {/* blocking disabled send output */
+        {/* non blocking mode */
     
             /*Log alert if last buffer*/
             if(ctx->last)
             {
                 ngx_log_error(NGX_LOG_ALERT, r->connection->log, 0,
                     "[Html_head filter]: cannot find <head> "
-                    "nonblocking");
+                    "non blocking");
             }
-            
             
             return ngx_http_html_head_output(r, ctx);
         }
