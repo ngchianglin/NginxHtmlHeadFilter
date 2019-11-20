@@ -500,7 +500,7 @@ ngx_http_html_head_body_filter(ngx_http_request_t *r, ngx_chain_t *in)
 
         b = ctx->in->buf;
 
-        if(b->last_buf || b->last_in_chain)
+        if(b->last_buf)
         {/* Last buffer  */
            ctx->last = 1; 
         }		
@@ -1359,6 +1359,5 @@ push(u_char c, headfilter_stack_t *stack)
     stack->data[stack->top] = c;
     return 0;    
 }
-
 
 
