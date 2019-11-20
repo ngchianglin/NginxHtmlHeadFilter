@@ -548,7 +548,7 @@ ngx_http_html_head_body_filter(ngx_http_request_t *r, ngx_chain_t *in)
     
     
     /* html head tag found, send modified output */
-    return  ngx_http_html_head_output(r, ctx);;
+    return  ngx_http_html_head_output(r, ctx);
     
 }
 
