@@ -82,7 +82,7 @@ headfilter_stack_t;
 
 /*
 module data struct for maintaining
-state per request
+state per request/response
 */
 typedef struct
 {
