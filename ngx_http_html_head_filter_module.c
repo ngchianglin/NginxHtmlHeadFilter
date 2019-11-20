@@ -501,12 +501,8 @@ ngx_http_html_head_body_filter(ngx_http_request_t *r, ngx_chain_t *in)
         b = ctx->in->buf;
 
         if(b->last_buf || b->last_in_chain)
-        {/* Last buffer and <head> not found */
+        {/* Last buffer  */
            ctx->last = 1; 
-           if(!ctx->found)
-           {
-              ctx->last_search = 1;
-           }
         }		
     
         *ctx->last_out=ctx->in;
