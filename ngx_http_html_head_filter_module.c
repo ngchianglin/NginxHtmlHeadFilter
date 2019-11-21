@@ -162,7 +162,7 @@ static ngx_command_t ngx_http_html_head_filter_commands[] =
 {
    {
      ngx_string("html_head_filter"), //Module Directive name
-     NGX_HTTP_LOC_CONF | NGX_CONF_1MORE, //Directive argument 
+     NGX_HTTP_LOC_CONF | NGX_CONF_1MORE, //Directive location and argument 
      ngx_conf_set_str_slot, //Handler function 
      NGX_HTTP_LOC_CONF_OFFSET, //Save to loc config 
      offsetof(ngx_http_html_head_filter_loc_conf_t, insert_text),//loc para
@@ -171,7 +171,7 @@ static ngx_command_t ngx_http_html_head_filter_commands[] =
    
    {
      ngx_string("html_head_filter_block"), //Module Directive name
-     NGX_HTTP_LOC_CONF | NGX_CONF_FLAG, //Directive argument
+     NGX_HTTP_LOC_CONF | NGX_CONF_FLAG, //Directive location and argument
      ngx_conf_set_flag_slot, //Handler function 
      NGX_HTTP_LOC_CONF_OFFSET, //Save to loc config 
      offsetof(ngx_http_html_head_filter_loc_conf_t, block),//loc para
@@ -818,7 +818,11 @@ ngx_http_html_head_buffer_output(ngx_http_request_t *r,
         ll = &cl->next;
         
         /* Consume the output chain buffer */
-        tmp->buf->pos = tmp->buf->last;
+        if (tmp->buf->recycled) 
+        {
+            tmp->buf->pos = tmp->buf->last;
+        }
+        
         tmp = tmp->next; 
     }
     
@@ -1359,5 +1363,7 @@ push(u_char c, headfilter_stack_t *stack)
     stack->data[stack->top] = c;
     return 0;    
 }
+
+
 
 
