@@ -876,8 +876,7 @@ ngx_html_insert_output(ngx_http_html_head_filter_ctx_t *ctx,
 				   
     ll = &ctx_in_new;				   
     b=ctx->in->buf;
-    ngx_memzero(b, sizeof(ngx_buf_t));
-
+   
     if(b->pos + ctx->index + 1 > b->last)
     {//Check that the head tag position does not exceed buffer
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
