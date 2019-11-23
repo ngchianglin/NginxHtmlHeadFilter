@@ -743,6 +743,10 @@ ngx_http_html_head_output_empty(ngx_http_request_t *r,
         (ngx_buf_tag_t)&ngx_http_html_head_filter_module);
         
     
+    ctx->last_out = &ctx->out;    
+    ctx->in = NULL; 
+        
+    
     if(ctx->buffered)
     {
          r->connection->buffered &= ~NGX_HTTP_SUB_BUFFERED;
