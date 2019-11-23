@@ -666,6 +666,7 @@ ngx_http_html_head_output_empty(ngx_http_request_t *r,
         #endif 
 
         content_length = HF_BUF_SIZE; 
+        /* Fall back to keepalive = 0 */
         r->keepalive = 0;
     }        
     
@@ -773,6 +774,13 @@ ngx_http_html_head_buffer_output(ngx_http_request_t *r,
     /* Replace all the output chain buffers with our own*/
     while(tmp)
     {
+        
+        if(tmp->buf->tag == (ngx_buf_tag_t) &ngx_http_html_head_filter_module)
+        {/* our own allocated buffer skip to next */
+             tmp = tmp->next; 
+             continue; 
+        }
+        
         cl = ngx_chain_get_free_buf(r->pool, &ctx->free);
         
         if (cl == NULL) 
@@ -1363,6 +1371,7 @@ push(u_char c, headfilter_stack_t *stack)
     stack->data[stack->top] = c;
     return 0;    
 }
+
 
 
 
