@@ -500,7 +500,7 @@ ngx_http_html_head_body_filter(ngx_http_request_t *r, ngx_chain_t *in)
 
         b = ctx->in->buf;
 
-        if(b->last_buf)
+        if(b->last_buf || b->last_in_chain)
         {/* Last buffer  */
            ctx->last = 1; 
         }		
@@ -603,6 +603,8 @@ ngx_http_html_head_output(ngx_http_request_t *r,
         }
     
         b = cl->buf;
+        ngx_memzero(b, sizeof(ngx_buf_t));
+        
         b->tag = (ngx_buf_tag_t) &ngx_http_html_head_filter_module;
         b->memory = 1;
         b->pos = padding;
@@ -711,6 +713,8 @@ ngx_http_html_head_output_empty(ngx_http_request_t *r,
         }
     
         b = cl->buf ;
+        ngx_memzero(b, sizeof(ngx_buf_t));
+        
         b->tag = (ngx_buf_tag_t) &ngx_http_html_head_filter_module;
         b->memory = 1;
         b->pos = empty_content;
@@ -796,6 +800,8 @@ ngx_http_html_head_buffer_output(ngx_http_request_t *r,
             return NGX_ERROR;
         }
         
+        ngx_memzero(cl->buf, sizeof(ngx_buf_t));
+        
         /* Size the memory for buf data*/
         sz = ngx_buf_size(tmp->buf);
         alloc_sz = HF_BUF_SIZE;
@@ -870,6 +876,7 @@ ngx_html_insert_output(ngx_http_html_head_filter_ctx_t *ctx,
 				   
     ll = &ctx_in_new;				   
     b=ctx->in->buf;
+    ngx_memzero(b, sizeof(ngx_buf_t));
 
     if(b->pos + ctx->index + 1 > b->last)
     {//Check that the head tag position does not exceed buffer
@@ -891,6 +898,7 @@ ngx_html_insert_output(ngx_http_html_head_filter_ctx_t *ctx,
     }
 
     b=cl->buf;
+    ngx_memzero(b, sizeof(ngx_buf_t));
    
     b->tag = (ngx_buf_tag_t) &ngx_http_html_head_filter_module;
     b->memory=1;
@@ -916,6 +924,7 @@ ngx_html_insert_output(ngx_http_html_head_filter_ctx_t *ctx,
     }
 
     b=cl->buf;
+    ngx_memzero(b, sizeof(ngx_buf_t));
    
     b->tag = (ngx_buf_tag_t) &ngx_http_html_head_filter_module;
     b->memory=1;
@@ -960,6 +969,7 @@ ngx_html_insert_output(ngx_http_html_head_filter_ctx_t *ctx,
     }
 
     b=cl->buf;
+    ngx_memzero(b, sizeof(ngx_buf_t));
 
     b->tag = (ngx_buf_tag_t) &ngx_http_html_head_filter_module;
     b->memory=1;
