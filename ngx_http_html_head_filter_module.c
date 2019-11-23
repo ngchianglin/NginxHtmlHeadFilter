@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2017 - 2019 Ng Chiang Lin
+ * Copyright (C) Ng Chiang Lin
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
