@@ -5,20 +5,47 @@ A Simple Nginx Response Body Filter Module
 The repository contains an Nginx Resonse Body Filter Module that will filter a HTTP response and insert a specific text string
 after the html &lt;head&gt; tag. For example, it can insert a monitoring javascript after the &lt;head&gt; tag.
 
-The filter module can be used together with Nginx proxy_pass, to insert text string into HTTP responses from an upstream web server. The module will process HTTP 200 OK responses where the content type is text/html. If the content from the upstream server is compressed (gzip, deflate etc...), it will not be modified. Refer to the Further Details below for more information on how the module is implemented and how it can be used.
+The filter module can be used together with Nginx proxy_pass, to insert text string into HTTP responses from an upstream web server. The module will process HTTP 200 OK responses where the content type is text/html. If the content from the upstream server is compressed (gzip, deflate etc...), it will not be modified. There is also a check on the content length, if it exceeds 10 MiB (10 x 1024 x 1024), the content will not be processed. 
 
-## Module Usage
+Refer to the Further Details below for more information on how the module is implemented and how it can be used.
+
+## Module Directives
 The module takes 2 directives that can be configured in the Nginx 's location context. 
 
-**html_head_filter**  "text string"
+**html_head_filter**  
+
+* syntax: html_head_filter [text string]
+* default: none
+* context: Location
 
 This directive enables the html head filter module. The argument "text string" will be inserted after the first &lt;head&gt; tag in the HTTP response body.  
 
 
-**html_head_filter_block** on/off
+**html_head_filter_block** 
+
+* syntax: html_head_filter_bloc [on/off]
+* default: off
+* context: location
 
 This is an optional directive. If it is set to on, the module will display a blank html page if the &lt;head&gt; tag is not found within the first 128 characters of a HTTP response. By default , if omitted, this directive is off. 
 
+## Example Configuration
+
+An example showing the insertion of a mymonitor1.js script after the &lt;head&gt; tag of html content. In this case, nginx is configured as a reverse proxy to a backend service running on localhost at port 8080. 
+
+        location / {
+
+            index  index.html index.htm;
+
+            proxy_set_header HOST $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_pass http://127.0.0.1:8080;
+
+            html_head_filter "<script src=\"mymonitor1.js\"></script>";
+            html_head_filter_block on;
+
+        }
 
 ## Compiling and Installation
 The module works with the latest stable version of [Nginx 1.16.1](https://nginx.org/download/). 
@@ -61,5 +88,6 @@ Gpg Signed commits are used for committing the source files.
 > Look at the repository commits tab for the verified label for each commit, or refer to [https://www.nighthour.sg/git-gpg.html](https://www.nighthour.sg/git-gpg.html) for instructions on verifying the git commit. 
 
 > A userful link on how to verify gpg signature [https://github.com/blog/2144-gpg-signature-verification](https://github.com/blog/2144-gpg-signature-verification)
+
 
 
