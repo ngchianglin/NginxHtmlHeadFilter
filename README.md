@@ -48,7 +48,7 @@ An example showing the insertion of a mymonitor1.js script after the &lt;head&gt
         }
 
 ## Compiling and Installation
-The module works with the latest stable version of [Nginx 1.16.1](https://nginx.org/download/). 
+The module works with the latest stable version of [Nginx 1.18.0](https://nginx.org/download/). 
 Download the latest stable version of Nginx and its corresponding pgp signature.  Verify the signature of the downloaded tarball. 
 Refer to [Nginx website](https://nginx.org/en/pgp_keys.html) for the public signing keys that can be used to verify the signature. 
 Extract the nginx source tarball if the signature verification is ok. 
@@ -68,9 +68,9 @@ Note: These example commands do not include signature verification of the downlo
 For security, do verify the signatures of the downloads. 
 
     git clone https://github.com/ngchianglin/NginxHtmlHeadFilter.git
-    wget https://nginx.org/download/nginx-1.16.1.tar.gz
-    tar -zxvf nginx-1.16.1.tar.gz
-    cd nginx-1.16.1
+    wget https://nginx.org/download/nginx-1.18.0.tar.gz
+    tar -zxvf nginx-1.18.0.tar.gz
+    cd nginx-1.18.0
     ./configure --with-cc-opt="-Wextra -Wformat -Wformat-security -Wformat-y2k -fPIE -O2 -D_FORTIFY_SOURCE=2 -fstack-protector-all" --with-ld-opt="-pie -Wl,-z,relro -Wl,-z,now -Wl,--strip-all"  --add-module=../NginxHtmlHeadFilter
     make
     sudo make install
