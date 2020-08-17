@@ -363,9 +363,17 @@ ngx_http_html_head_header_filter(ngx_http_request_t *r )
 
     if (r == r->main) 
     {//Main request
-        content_length = r->headers_out.content_length_n + 
-            slcf->insert_text.len;
-            
+        
+        if (r->headers_out.content_length_n > 0) 
+        {
+            content_length = r->headers_out.content_length_n + 
+                             slcf->insert_text.len;
+        }
+        else
+        {
+            content_length = r->headers_out.content_length_n;
+        }
+
         #if HT_HEADF_DEBUG
             ngx_log_debug2(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
                 "[Html_head filter]: ngx_http_html_head_header_filter: "
@@ -579,7 +587,8 @@ ngx_http_html_head_output(ngx_http_request_t *r,
     }
     
 
-    if(ctx->last && ctx->found == 0)
+    if(ctx->last && ctx->found == 0
+       && r->headers_out.content_length_n > 0)
     {/* Append additional buffer to make up for content length */
      
         cl = ngx_chain_get_free_buf(r->pool, &ctx->free);
