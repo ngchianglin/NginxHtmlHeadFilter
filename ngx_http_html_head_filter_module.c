@@ -291,7 +291,7 @@ ngx_http_html_head_header_filter(ngx_http_request_t *r )
     slcf = ngx_http_get_module_loc_conf(r, ngx_http_html_head_filter_module);
     
     
-    if(slcf == NULL)
+    if(slcf == NULL || slcf->insert_text.data == NULL)
     {
         #if HT_HEADF_DEBUG
             ngx_log_debug0(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
