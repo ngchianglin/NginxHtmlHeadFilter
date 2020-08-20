@@ -95,6 +95,7 @@ typedef struct
 {
 ngx_uint_t  last;
 ngx_uint_t  last_search; 
+ngx_uint_t  empty_sent;
 ngx_uint_t  count;
 ngx_uint_t  found;
 ngx_uint_t  index;
@@ -472,7 +473,7 @@ ngx_http_html_head_body_filter(ngx_http_request_t *r, ngx_chain_t *in)
                 "[Html_head filter]: ngx_http_html_head_body_filter: "
                 "input chain is null");
         #endif     
-        
+       
        return ngx_http_next_body_filter(r, in);
     }
 	
@@ -524,6 +525,7 @@ ngx_http_html_head_body_filter(ngx_http_request_t *r, ngx_chain_t *in)
         ctx->last_out=&ctx->in->next;
         ctx->in = ctx->in->next;
     }
+    
 
     
     if(!ctx->found)
@@ -577,7 +579,7 @@ ngx_http_html_head_output(ngx_http_request_t *r,
     u_char                                  *padding;
     ngx_buf_t                               *b;
     ngx_int_t                               rc;
-    ngx_chain_t                             *cl;
+    ngx_chain_t                             *cl, *tmp;
     ngx_http_html_head_filter_loc_conf_t    *slcf;
    
   
@@ -593,10 +595,43 @@ ngx_http_html_head_output(ngx_http_request_t *r,
         return NGX_ERROR;
     }
     
+    
+    #if HT_HEADF_DEBUG
+        ngx_log_debug0(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
+            "[Html_head filter]: ngx_http_html_head_output: "
+            "Sending output" 
+            );
+    #endif 
+    
 
     if(ctx->last && ctx->found == 0
        && r->headers_out.content_length_n > 0)
     {/* Append additional buffer to make up for content length */
+        
+        #if HT_HEADF_DEBUG
+            ngx_log_debug0(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
+                "[Html_head filter]: ngx_http_html_head_output: "
+                "Appending additional buffer" 
+                );
+        #endif 
+        
+        
+        tmp = ctx->out;
+        while (tmp) 
+        {
+            if (tmp->buf->last_buf)
+            {
+                
+               if (ngx_buf_size(tmp->buf) == 0)
+               {
+                  tmp->buf->sync = 1;
+               }
+                
+               tmp->buf->last_buf = 0;  
+            }
+            
+            tmp = tmp->next;
+        }
      
         cl = ngx_chain_get_free_buf(r->pool, &ctx->free);
         if (cl == NULL) 
@@ -661,10 +696,15 @@ ngx_http_html_head_output_empty(ngx_http_request_t *r,
     size_t        i, quotient, remainder;
     u_char        *empty_content; 
     ngx_buf_t     *b;
-    ngx_int_t     rc;
+    /* ngx_int_t     rc; */
     ngx_uint_t    content_length = 0;
     ngx_chain_t   *cl, **ll;
     
+        
+   if (ctx->empty_sent) 
+   {
+       return NGX_OK; 
+   }
     
     ngx_log_error(NGX_LOG_ALERT, r->connection->log, 0,
         "[Html_head filter]: ngx_http_html_head_output_empty: "
@@ -767,21 +807,22 @@ ngx_http_html_head_output_empty(ngx_http_request_t *r,
     
     ctx->last = 1;
     
-    rc = ngx_http_next_body_filter(r, ctx->out);
+    ngx_http_next_body_filter(r, ctx->out);
     ngx_chain_update_chains(r->pool, &ctx->free, &ctx->busy, &ctx->out,
         (ngx_buf_tag_t)&ngx_http_html_head_filter_module);
         
     
-    ctx->last_out = &ctx->out;    
+    ctx->last_out = &ctx->out;   
     ctx->in = NULL; 
-        
+    ctx->empty_sent = 1;    
     
     if(ctx->buffered)
     {
          r->connection->buffered &= ~NGX_HTTP_SUB_BUFFERED;
     }
     
-    return rc; 
+    
+    return NGX_OK; 
 }
 
 /* Function to buffer output */
@@ -792,6 +833,14 @@ ngx_http_html_head_buffer_output(ngx_http_request_t *r,
     size_t        sz, alloc_sz; 
     ngx_chain_t   *cl, *tmp, **ll;
     
+
+    #if HT_HEADF_DEBUG
+        ngx_log_debug0(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
+            "[Html_head filter]: ngx_http_html_head_buffer_output: "
+            "Buffering output" 
+            );
+    #endif 
+
     
     if(ctx->buffered == 0)
     {
