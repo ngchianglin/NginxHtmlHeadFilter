@@ -703,7 +703,7 @@ ngx_http_html_head_output_empty(ngx_http_request_t *r,
         
    if (ctx->empty_sent) 
    {
-       return NGX_OK; 
+       return NGX_DONE; 
    }
     
     ngx_log_error(NGX_LOG_ALERT, r->connection->log, 0,
@@ -822,8 +822,9 @@ ngx_http_html_head_output_empty(ngx_http_request_t *r,
     }
     
     
-    return NGX_OK; 
+    return NGX_DONE; 
 }
+
 
 /* Function to buffer output */
 static ngx_int_t
@@ -857,67 +858,82 @@ ngx_http_html_head_buffer_output(ngx_http_request_t *r,
     while(tmp)
     {
         
-        if(tmp->buf->tag == (ngx_buf_tag_t) &ngx_http_html_head_filter_module)
-        {/* our own allocated buffer skip to next */
-             tmp = tmp->next; 
-             continue; 
-        }
-        
-        cl = ngx_chain_get_free_buf(r->pool, &ctx->free);
-        
-        if (cl == NULL) 
-        {
-            ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
-                "[Html_head filter]: ngx_http_html_head_buffer_output: "
-                "unable to allocate output chain memory");
+         if(tmp->buf->tag != (ngx_buf_tag_t) &ngx_http_html_head_filter_module)
+         {
+             
+            cl = ngx_chain_get_free_buf(r->pool, &ctx->free);
+
+            if (cl == NULL) 
+            {
+                ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
+                    "[Html_head filter]: ngx_http_html_head_buffer_output: "
+                    "unable to allocate output chain memory");
+                    
+                return NGX_ERROR;
+            }
+
+            ngx_memzero(cl->buf, sizeof(ngx_buf_t));
+
+            /* Size the memory for buf data*/
+            sz = ngx_buf_size(tmp->buf);
+            alloc_sz = HF_BUF_SIZE;
+            while (sz > alloc_sz)
+            {
+                alloc_sz = alloc_sz * 2; 
+            }
+
+            cl->buf->start =  ngx_palloc(r->pool, alloc_sz);
+
+            if(cl->buf->start == NULL)
+            {
+                ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
+                    "[Html_head filter]: ngx_http_html_head_buffer_output: "
+                    "unable to allocate output chain buffer data memory");
+                    
+                return NGX_ERROR;
                 
-            return NGX_ERROR;
-        }
+            }
+
+            cl->buf->pos  = cl->buf->start; 
+            cl->buf->last = cl->buf->start;
+            cl->buf->end = cl->buf->start + alloc_sz; 
+            cl->buf->tag = (ngx_buf_tag_t) &ngx_http_html_head_filter_module;
+            cl->buf->recycled = 1; 
+            cl->buf->temporary = 1; 
+
+            cl->buf->sync = tmp->buf->sync;
+            cl->buf->flush = tmp->buf->flush;
+            cl->buf->last_buf = tmp->buf->last_buf;
+            cl->buf->last_in_chain = tmp->buf->last_in_chain;
+
+            cl->buf->last = ngx_copy(cl->buf->last, tmp->buf->pos, sz);
+
+            /* Attach our own buffer chain to our context output chain */
+            *ll = cl;
+            ll = &cl->next;
+
+            /* Consume the output chain buffer */
+            if (tmp->buf->recycled) 
+            {
+                tmp->buf->pos = tmp->buf->last;
+            }
+
+            tmp = tmp->next; 
+                              
+             
+             
+         }
+         else
+         {
+            /* our own allocated buffer skip to next */
+            *ll = tmp;
+            ll = &tmp->next;
+            tmp = tmp->next; 
+         }
         
-        ngx_memzero(cl->buf, sizeof(ngx_buf_t));
         
-        /* Size the memory for buf data*/
-        sz = ngx_buf_size(tmp->buf);
-        alloc_sz = HF_BUF_SIZE;
-        while (sz > alloc_sz)
-        {
-            alloc_sz = alloc_sz * 2; 
-        }
-        
-        cl->buf->start =  ngx_palloc(r->pool, alloc_sz);
-        
-        if(cl->buf->start == NULL)
-        {
-            ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
-                "[Html_head filter]: ngx_http_html_head_buffer_output: "
-                "unable to allocate output chain buffer data memory");
-                
-            return NGX_ERROR;
-            
-        }
-        
-        cl->buf->pos  = cl->buf->start; 
-        cl->buf->last = cl->buf->start;
-        cl->buf->end = cl->buf->start + alloc_sz; 
-        cl->buf->tag = (ngx_buf_tag_t) &ngx_http_html_head_filter_module;
-        cl->buf->recycled = 1; 
-        cl->buf->temporary = 1; 
-        
-        cl->buf->sync = tmp->buf->sync;
-        cl->buf->last = ngx_copy(cl->buf->last, tmp->buf->pos, sz);
-        
-        /* Attach our own buffer chain to our context output chain */
-        *ll = cl;
-        ll = &cl->next;
-        
-        /* Consume the output chain buffer */
-        if (tmp->buf->recycled) 
-        {
-            tmp->buf->pos = tmp->buf->last;
-        }
-        
-        tmp = tmp->next; 
     }
+   
     
     /* Update the last output chain address to our own chain*/
     ctx->last_out = ll; 
