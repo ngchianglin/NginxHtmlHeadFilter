@@ -14,7 +14,7 @@ The &lt;head&gt; tag must appear within the first 256 characters of the HTTP res
 Refer to the Further Details below for more information on how the module is implemented and how it can be used.
 
 ## Module Directives
-The module takes 2 directives that can be configured in the Nginx 's location context. 
+The module takes a single directive that can be configured in the Nginx 's location context. 
 
 **html_head_filter**  
 
