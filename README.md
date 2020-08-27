@@ -44,6 +44,7 @@ An example showing the insertion of a mymonitor1.js script after the &lt;head&gt
         }
 
 ## Compiling and Installation
+
 The module works with the latest stable version of [Nginx 1.18.0](https://nginx.org/download/). 
 Download the latest stable version of Nginx and its corresponding pgp signature.  Verify the signature of the downloaded tarball. 
 Refer to [Nginx website](https://nginx.org/en/pgp_keys.html) for the public signing keys that can be used to verify the signature. 
@@ -74,13 +75,15 @@ For security, do verify the signatures of the downloads.
 
 ## Further Details
 
-Please note that some earlier versions of this filter module has more features such as displaying a blank page if the &lt;head&gt; tag
-is not found etc...added over time. However, some of these have caused the code to become more complicated than is necessary and potentially buggy. The author has reverted to the original simple functionality. 
+Please note that there is a customized version of the module that displays a blank page if the &lt;head> tag is not found. 
+The customized version is available at 
 
-The version before this can be checked out using the following command after cloning the repos. 
+[https://github.com/ngchianglin/NginxHtmlHeadBlankFilter](https://github.com/ngchianglin/NginxHtmlHeadBlankFilter)
 
-    git checkout 6905cb7ad91ccdf9ef971b8b55cb05c0af7f1a7b
+Displaying an empty page can be a useful security feature if it is mandatory that a specific monitoring script must be present on
+all the html pages of a website. 
 
+The customized module should not be installed together with this version on the same instance of nginx. 
 
 
 Refer to 
